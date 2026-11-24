@@ -1,0 +1,139 @@
+"use server";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { tx, sql } from "@/lib/db";
+import { requireUser, clientIp } from "@/lib/auth";
+import { audit } from "@/lib/audit";
+import { projectRole, atLeast, HttpError, type Role } from "@/lib/perms";
+import { deleteLibrary, restoreLibrary, revertTreeEvent, restoreNode } from "@/lib/docs";
+
+async function ctxFor(projectId: number, need: Role) {
+  const user = await requireUser();
+  const role = await projectRole(user, projectId);
+  if (!atLeast(role, need)) throw new HttpError(403, "权限不足");
+  return { user, role: role!, ctx: { actorId: user.id, projectId, ip: await clientIp() } };
+}
+
+export async function createProject(form: FormData) {
+  const user = await requireUser("/p/new");
+  const data = z
+    .object({
+      name: z.string().trim().min(1).max(60),
+      slug: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/, "标识需为 3-40 位小写字母、数字或连字符"),
+      description: z.string().trim().max(300).default(""),
+    })
+    .parse(Object.fromEntries(form));
+  const [exists] = await sql`SELECT 1 FROM projects WHERE slug = ${data.slug}`;
+  if (exists) redirect(`/p/new?error=${encodeURIComponent("该标识已被使用")}`);
+  await tx(async (t) => {
+    const [p] = await t<{ id: number }[]>`INSERT INTO projects (slug, name, description, created_by) VALUES (${data.slug}, ${data.name}, ${data.description}, ${user.id}) RETURNING id`;
+    await t`INSERT INTO project_members (project_id, user_id, role) VALUES (${p.id}, ${user.id}, 'admin')`;
+    const [l] = await t<{ id: number }[]>`INSERT INTO libraries (project_id, name, description, created_by) VALUES (${p.id}, '默认知识库', '', ${user.id}) RETURNING id`;
+    await audit(t, { projectId: p.id, actorId: user.id, objectType: "project", objectId: p.id, action: "project.create", detail: { name: data.name, slug: data.slug }, ip: await clientIp() });
+    await audit(t, { projectId: p.id, actorId: user.id, objectType: "library", objectId: l.id, action: "library.create", detail: { name: "默认知识库" } });
+  });
+  redirect(`/p/${data.slug}`);
+}
+
+export async function updateProject(projectId: number, form: FormData) {
+  const { ctx } = await ctxFor(projectId, "admin");
+  const data = z.object({ name: z.string().trim().min(1).max(60), description: z.string().trim().max(300).default("") }).parse(Object.fromEntries(form));
+  await tx(async (t) => {
+    await t`UPDATE projects SET name = ${data.name}, description = ${data.description} WHERE id = ${projectId}`;
+    await audit(t, { ...ctx, objectType: "project", objectId: projectId, action: "project.update", detail: data });
+  });
+  revalidatePath("/p", "layout");
+}
+
+export async function addMember(projectId: number, form: FormData) {
+  const { ctx } = await ctxFor(projectId, "admin");
+  const username = String(form.get("username") ?? "").trim().replace(/^@/, "");
+  const role = z.enum(["admin", "editor", "member"]).parse(form.get("role"));
+  const [u] = await sql<{ id: number }[]>`SELECT id FROM users WHERE lower(username) = lower(${username})`;
+  if (!u) return { error: `未找到用户 @${username}（对方需先登录一次）` };
+  await tx(async (t) => {
+    await t`INSERT INTO project_members (project_id, user_id, role) VALUES (${projectId}, ${u.id}, ${role})
+            ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role`;
+    await audit(t, { ...ctx, objectType: "member", objectId: u.id, action: "member.add", detail: { username, role } });
+  });
+  revalidatePath("/p", "layout");
+  return { ok: true };
+}
+
+export async function setMemberRole(projectId: number, userId: number, role: string) {
+  const { ctx } = await ctxFor(projectId, "admin");
+  const r = z.enum(["admin", "editor", "member", "remove"]).parse(role);
+  await tx(async (t) => {
+    const [{ n }] = await t<{ n: number }[]>`SELECT count(*)::int n FROM project_members WHERE project_id = ${projectId} AND role = 'admin' AND user_id <> ${userId}`;
+    if (n === 0) throw new HttpError(400, "项目至少需要一位管理员");
+    if (r === "remove") {
+      await t`DELETE FROM project_members WHERE project_id = ${projectId} AND user_id = ${userId}`;
+      await audit(t, { ...ctx, objectType: "member", objectId: userId, action: "member.remove" });
+    } else {
+      await t`UPDATE project_members SET role = ${r} WHERE project_id = ${projectId} AND user_id = ${userId}`;
+      await audit(t, { ...ctx, objectType: "member", objectId: userId, action: "member.role", detail: { role: r } });
+    }
+  });
+  revalidatePath("/p", "layout");
+}
+
+export async function createLibrary(projectId: number, form: FormData) {
+  const { ctx } = await ctxFor(projectId, "editor");
+  const data = z.object({ name: z.string().trim().min(1).max(60), description: z.string().trim().max(300).default("") }).parse(Object.fromEntries(form));
+  let id = 0;
+  await tx(async (t) => {
+    const [{ pos }] = await t<{ pos: number }[]>`SELECT coalesce(max(position), 0) + 10 AS pos FROM libraries WHERE project_id = ${projectId}`;
+    const [l] = await t<{ id: number }[]>`INSERT INTO libraries (project_id, name, description, position, created_by) VALUES (${projectId}, ${data.name}, ${data.description}, ${pos}, ${ctx.actorId}) RETURNING id`;
+    id = l.id;
+    await t`INSERT INTO tree_events (project_id, library_id, actor_id, action, after) VALUES (${projectId}, ${l.id}, ${ctx.actorId}, 'library.create', ${t.json(data)})`;
+    await audit(t, { ...ctx, objectType: "library", objectId: l.id, action: "library.create", detail: data });
+  });
+  const [p] = await sql<{ slug: string }[]>`SELECT slug FROM projects WHERE id = ${projectId}`;
+  redirect(`/p/${p.slug}/kb/${id}`);
+}
+
+export async function updateLibrary(projectId: number, libraryId: number, form: FormData) {
+  const { ctx } = await ctxFor(projectId, "editor");
+  const data = z.object({ name: z.string().trim().min(1).max(60), description: z.string().trim().max(300).default("") }).parse(Object.fromEntries(form));
+  await tx(async (t) => {
+    await t`UPDATE libraries SET name = ${data.name}, description = ${data.description} WHERE id = ${libraryId} AND project_id = ${projectId}`;
+    await audit(t, { ...ctx, objectType: "library", objectId: libraryId, action: "library.update", detail: data });
+  });
+  revalidatePath("/p", "layout");
+}
+
+export async function setLibraryVisibility(projectId: number, libraryId: number, isPublic: boolean) {
+  const { ctx } = await ctxFor(projectId, "admin");
+  await tx(async (t) => {
+    await t`UPDATE libraries SET is_public = ${isPublic} WHERE id = ${libraryId} AND project_id = ${projectId}`;
+    await audit(t, { ...ctx, objectType: "library", objectId: libraryId, action: "library.visibility", detail: { is_public: isPublic } });
+  });
+  revalidatePath("/p", "layout");
+}
+
+export async function removeLibrary(projectId: number, libraryId: number) {
+  const { ctx } = await ctxFor(projectId, "admin");
+  await tx((t) => deleteLibrary(t, ctx, libraryId));
+  revalidatePath("/p", "layout");
+}
+
+export async function bringBackLibrary(projectId: number, libraryId: number) {
+  const { ctx } = await ctxFor(projectId, "admin");
+  await tx((t) => restoreLibrary(t, ctx, libraryId));
+  revalidatePath("/p", "layout");
+}
+
+export async function bringBackNode(projectId: number, nodeId: number) {
+  const { ctx } = await ctxFor(projectId, "admin");
+  const [n] = await sql<{ project_id: number }[]>`SELECT l.project_id FROM nodes n JOIN libraries l ON l.id = n.library_id WHERE n.id = ${nodeId}`;
+  if (n?.project_id !== projectId) throw new HttpError(404, "不存在");
+  await tx((t) => restoreNode(t, ctx, nodeId));
+  revalidatePath("/p", "layout");
+}
+
+export async function revertEvent(projectId: number, eventId: number) {
+  const { ctx } = await ctxFor(projectId, "admin");
+  await tx((t) => revertTreeEvent(t, ctx, eventId));
+  revalidatePath("/p", "layout");
+}
