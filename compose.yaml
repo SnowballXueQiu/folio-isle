@@ -1,0 +1,79 @@
+# 言屿 Folio Isle — base stack: web + AI worker + PostgreSQL.
+# Works with `docker compose` and rootless `podman-compose` / `podman compose`.
+# Optional ClickHouse log store: add `-f compose.clickhouse.yaml`.
+name: folio-isle
+
+x-app-env: &app-env
+  DATABASE_URL: postgres://folio:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/folio
+  APP_URL: ${APP_URL:-http://localhost:3100}
+  APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env}
+  SITE_ADMIN_USERNAMES: ${SITE_ADMIN_USERNAMES:-}
+  SSO_PROVIDER_ID: ${SSO_PROVIDER_ID:-inf}
+  SSO_PROVIDER_NAME: ${SSO_PROVIDER_NAME:-Inf Network 通行证}
+  SSO_AUTHORIZE_URL: ${SSO_AUTHORIZE_URL:-}
+  SSO_TOKEN_URL: ${SSO_TOKEN_URL:-}
+  SSO_USERINFO_URL: ${SSO_USERINFO_URL:-}
+  SSO_CLIENT_ID: ${SSO_CLIENT_ID:-}
+  SSO_CLIENT_SECRET: ${SSO_CLIENT_SECRET:-}
+  SSO_SCOPE: ${SSO_SCOPE:-profile}
+  AI_PROVIDER_NAME: ${AI_PROVIDER_NAME:-DeepSeek}
+  AI_BASE_URL: ${AI_BASE_URL:-https://api.deepseek.com}
+  AI_API_KEY: ${AI_API_KEY:-}
+  AI_MODEL: ${AI_MODEL:-deepseek-chat}
+
+services:
+  web:
+    build: .
+    image: localhost/folio-isle:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+      FOLIO_SERVICE: web
+    ports:
+      - "${FOLIO_BIND:-127.0.0.1}:${FOLIO_PORT:-3100}:3000"
+    healthcheck:
+      test: ["CMD", "node", "scripts/healthcheck.js", "web"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+
+  worker:
+    build: .
+    image: localhost/folio-isle:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["node", "dist/worker/main.js"]
+    environment:
+      <<: *app-env
+      FOLIO_SERVICE: worker
+      AI_CONCURRENCY: ${AI_CONCURRENCY:-4}
+    healthcheck:
+      test: ["CMD", "node", "scripts/healthcheck.js", "worker"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+
+  db:
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: folio
+      POSTGRES_DB: folio
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - folio-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio -d folio"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  folio-db:

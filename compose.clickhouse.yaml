@@ -1,0 +1,35 @@
+# Overlay: structured run logs in ClickHouse (TTL 30 days by default).
+#   docker compose -f compose.yaml -f compose.clickhouse.yaml up -d
+# The app keeps working if ClickHouse is stopped; logs still go to stdout.
+services:
+  web:
+    environment:
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: folio
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD in .env}
+      CLICKHOUSE_TTL_DAYS: ${CLICKHOUSE_TTL_DAYS:-30}
+  worker:
+    environment:
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: folio
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD in .env}
+      CLICKHOUSE_TTL_DAYS: ${CLICKHOUSE_TTL_DAYS:-30}
+  clickhouse:
+    image: docker.io/clickhouse/clickhouse-server:24.8-alpine
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_USER: folio
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD in .env}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "0"
+    volumes:
+      - folio-clickhouse:/var/lib/clickhouse
+    ulimits:
+      nofile: { soft: 262144, hard: 262144 }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  folio-clickhouse:

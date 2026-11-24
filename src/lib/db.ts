@@ -21,7 +21,17 @@ export function makeSql(max = 10): Sql {
   }) as unknown as Sql;
 }
 
-export const sql: Sql = g.__folioSql ?? (g.__folioSql = makeSql(Number(process.env.DB_POOL_SIZE || 10)));
+// Created lazily so that importing this module (e.g. during `next build`) needs no database.
+function instance(): Sql {
+  return (g.__folioSql ??= makeSql(Number(process.env.DB_POOL_SIZE || 10)));
+}
+export const sql: Sql = new Proxy(function () {} as unknown as Sql, {
+  apply: (_t, _this, args) => (instance() as unknown as (...a: unknown[]) => unknown)(...args),
+  get: (_t, prop) => {
+    const v = (instance() as unknown as Record<PropertyKey, unknown>)[prop];
+    return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(instance()) : v;
+  },
+});
 
 export function tx<T>(fn: (t: Tx) => Promise<T>): Promise<T> {
   return sql.begin(fn as (t: Tx) => Promise<T>) as Promise<T>;
