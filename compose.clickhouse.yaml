@@ -16,7 +16,7 @@ services:
       CLICKHOUSE_TTL_DAYS: ${CLICKHOUSE_TTL_DAYS:-30}
   clickhouse:
     image: docker.io/clickhouse/clickhouse-server:24.8-alpine
-    restart: unless-stopped
+    restart: always
     environment:
       CLICKHOUSE_USER: folio
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD in .env}

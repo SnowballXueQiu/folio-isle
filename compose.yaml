@@ -25,7 +25,7 @@ services:
   web:
     build: .
     image: localhost/folio-isle:latest
-    restart: unless-stopped
+    restart: always
     depends_on:
       db:
         condition: service_healthy
@@ -44,7 +44,7 @@ services:
   worker:
     build: .
     image: localhost/folio-isle:latest
-    restart: unless-stopped
+    restart: always
     depends_on:
       db:
         condition: service_healthy
@@ -62,7 +62,7 @@ services:
 
   db:
     image: docker.io/library/postgres:16-alpine
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_USER: folio
       POSTGRES_DB: folio
