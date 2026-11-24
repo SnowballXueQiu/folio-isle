@@ -4,7 +4,7 @@
 type Level = "debug" | "info" | "warn" | "error";
 type Fields = Record<string, unknown>;
 
-const SERVICE = process.env.FOLIO_SERVICE || "web";
+const service = () => process.env.FOLIO_SERVICE || "web";
 const CH_URL = process.env.CLICKHOUSE_URL; // e.g. http://clickhouse:8123
 const CH_DB = process.env.CLICKHOUSE_DB || "folio";
 const REDACT = /(key|secret|token|password|authorization|content|body)$/i;
@@ -53,16 +53,16 @@ async function flush() {
   } catch (e) {
     ready = null;
     // ClickHouse is optional: never let it break the app.
-    process.stdout.write(JSON.stringify({ ts: new Date().toISOString(), level: "warn", service: SERVICE, event: "clickhouse.unavailable", error: String(e) }) + "\n");
+    process.stdout.write(JSON.stringify({ ts: new Date().toISOString(), level: "warn", service: service(), event: "clickhouse.unavailable", error: String(e) }) + "\n");
   }
 }
 
 function emit(level: Level, event: string, fields: Fields = {}) {
   const f = clean(fields);
   const ts = new Date();
-  process.stdout.write(JSON.stringify({ ts: ts.toISOString(), level, service: SERVICE, event, ...f }) + "\n");
+  process.stdout.write(JSON.stringify({ ts: ts.toISOString(), level, service: service(), event, ...f }) + "\n");
   if (CH_URL) {
-    buffer.push(JSON.stringify({ ts: ts.toISOString().replace("T", " ").replace("Z", ""), level, service: SERVICE, event, fields: JSON.stringify(f) }));
+    buffer.push(JSON.stringify({ ts: ts.toISOString().replace("T", " ").replace("Z", ""), level, service: service(), event, fields: JSON.stringify(f) }));
     if (buffer.length > 2000) buffer = buffer.slice(-2000);
     timer ??= setTimeout(flush, 2000);
   }

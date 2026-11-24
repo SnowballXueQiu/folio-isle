@@ -37,8 +37,8 @@ async function recoverLeases() {
 }
 
 async function planPending() {
-  const projects = await sql<{ id: number; requested: Date }[]>`
-    SELECT id, ai_plan_requested_at AS requested FROM projects WHERE ai_enabled AND ai_plan_requested_at IS NOT NULL`;
+  const projects = await sql<{ id: number; requested: string }[]>`
+    SELECT id, ai_plan_requested_at::text AS requested FROM projects WHERE ai_enabled AND ai_plan_requested_at IS NOT NULL`;
   if (!projects.length) return;
   const cfg = await getAiConfig(sql);
   for (const p of projects) {
@@ -46,7 +46,7 @@ async function planPending() {
       await t`SELECT pg_advisory_xact_lock(7271002, ${p.id}::int)`;
       const docs = await currentDocs(t, p.id);
       const res = await applyPlan(t, p.id, planFor(p.id, docs, cfg.model));
-      await t`UPDATE projects SET ai_plan_requested_at = NULL WHERE id = ${p.id} AND ai_plan_requested_at = ${p.requested}`;
+      await t`UPDATE projects SET ai_plan_requested_at = NULL WHERE id = ${p.id} AND ai_plan_requested_at::text = ${p.requested}`;
       log.info("ai.plan", { projectId: p.id, docs: docs.length, ...res });
     });
   }
