@@ -5,15 +5,16 @@ import { fmtDate } from "@/lib/util";
 
 const OBJECT_TYPES = ["doc", "node", "library", "member", "comment", "todo", "note", "attachment", "ai", "project", "settings", "user"];
 
-export function AuditView({ base, filter, rows, hasMore, page, showProject }: { base: string; filter: AuditFilter; rows: AuditRow[]; hasMore: boolean; page: number; showProject?: boolean }) {
+export function AuditView({ base, filter, rows, hasMore, page, showProject, hidden = {} }: { base: string; filter: AuditFilter; rows: AuditRow[]; hasMore: boolean; page: number; showProject?: boolean; hidden?: Record<string, string> }) {
   const qs = (p: number) => {
-    const s = new URLSearchParams(Object.entries({ ...filter, page: String(p) }).filter(([k, v]) => v && k !== "projectId") as [string, string][]);
+    const s = new URLSearchParams(Object.entries({ ...hidden, ...filter, page: String(p) }).filter(([k, v]) => v && k !== "projectId") as [string, string][]);
     return `${base}?${s}`;
   };
   const objectHref = (r: AuditRow) => (["doc", "node"].includes(r.object_type) && r.object_id ? `/d/${r.object_id}` : null);
   return (
     <>
       <form className="panel p-4 grid sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+        {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
         <div><label className="label">操作者</label><input name="actor" defaultValue={filter.actor} className="input h-9" placeholder="用户名" /></div>
         <div>
           <label className="label">对象类型</label>
