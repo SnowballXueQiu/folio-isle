@@ -77,6 +77,11 @@ export function StarMap({ docs, edges, libraries }: { docs: MapDoc[]; edges: Map
       maxZoom: 3,
       wheelSensitivity: 0.25,
     });
+    // small graphs: keep labels at a readable size instead of zooming to fill the canvas
+    if (instance.zoom() > 1) {
+      instance.zoom(1);
+      instance.center();
+    }
     instance.on("tap", "edge", (ev) => setSelected(edges[ev.target.data("idx")]));
     instance.on("tap", "node", (ev) => setFocus(ev.target.data("doc")));
     instance.on("tap", (ev) => {
