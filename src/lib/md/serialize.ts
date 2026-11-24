@@ -185,11 +185,12 @@ function serializeBlock(n: PMNode): string | null {
     case "orderedList":
     case "taskList": {
       const start = Number(n.attrs?.start ?? 1);
-      const items = (n.content ?? []).map((item, i) => {
+      const items = (n.content ?? []).flatMap((item, i) => {
         let marker = "- ";
         if (n.type === "orderedList") marker = `${start + i}. `;
         if (n.type === "taskList") marker = item.attrs?.checked ? "- [x] " : "- [ ] ";
         const body = serializeItemBody(item.content);
+        if (!body && n.type !== "taskList") return [];
         const pad = " ".repeat(n.type === "orderedList" ? marker.length : 2);
         return marker + indent(body, pad);
       });

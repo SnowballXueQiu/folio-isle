@@ -23,7 +23,7 @@ export default async function NewProject({ searchParams }: { searchParams: Promi
             <label className="label" htmlFor="slug">链接标识</label>
             <div className="flex items-center gap-2">
               <span className="muted text-sm">/p/</span>
-              <input id="slug" name="slug" className="input" required pattern="[a-z0-9][a-z0-9-]{1,38}[a-z0-9]" placeholder="inf-docs" />
+              <input id="slug" name="slug" className="input" required pattern="[a-z0-9][a-z0-9\-]{1,38}[a-z0-9]" placeholder="inf-docs" />
             </div>
           </div>
           <div>
