@@ -27,7 +27,7 @@ export function AuditView({ base, filter, rows, total, pages, page, showProject,
     const s = new URLSearchParams(Object.entries({ ...hidden, ...filter, page: String(p) }).filter(([k, v]) => v && k !== "projectId") as [string, string][]);
     return `${base}?${s}`;
   };
-  const objectHref = (r: AuditRow) => (["doc", "node"].includes(r.object_type) && r.object_id ? `/d/${r.object_id}` : null);
+  const objectHref = (r: AuditRow) => (r.obj_state === "ok" ? `/d/${r.object_id}` : null);
   return (
     <>
       <form className="panel p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-[1.2fr_1fr_0.8fr_1.4fr_1fr_1fr_auto] gap-3 items-end">
@@ -66,9 +66,11 @@ export function AuditView({ base, filter, rows, total, pages, page, showProject,
                       </span>
                       {showProject && <span className="w-[100px] shrink-0 truncate text-xs muted">{r.project ?? "—"}</span>}
                       <span className="w-[112px] shrink-0 truncate font-medium text-[13px]">{ACTION_LABELS[r.action] ?? r.action}</span>
-                      <span className="w-[120px] shrink-0 truncate text-xs muted">
+                      <span className="w-[150px] shrink-0 truncate text-xs muted">
                         {OBJECT_LABEL[r.object_type] ?? r.object_type}
                         {r.object_id && (href ? <Link className="ml-1 underline underline-offset-2 hover:text-[var(--text)]" href={href}>#{r.object_id}</Link> : <span className="ml-1">#{r.object_id.slice(0, 8)}</span>)}
+                        {r.obj_state === "deleted" && <span className="ml-1.5 chip !py-0 !px-1.5 !text-[10.5px]" title="该对象已删除，可在项目设置的回收站中恢复">已删除</span>}
+                        {r.obj_state === "missing" && <span className="ml-1.5 chip !py-0 !px-1.5 !text-[10.5px]">不存在</span>}
                       </span>
                       <span className="flex-1 min-w-0 truncate text-xs muted">{d}</span>
                     </summary>
