@@ -1,7 +1,8 @@
 "use client";
 import { Select } from "@/components/ui/Select";
 import { confirmDialog, promptDialog, toast } from "@/components/ui/dialogs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { EditorContent, useEditor, ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent, type NodeViewProps, type Editor as TEditor } from "@tiptap/react";
@@ -399,32 +400,78 @@ function Sep() {
   return <span className="w-px h-5 bg-[var(--line)] mx-1 shrink-0" />;
 }
 
+/** Toolbar dropdown rendered in a portal (fixed), so the scrollable toolbar never clips it. */
+function ToolPop({ anchor, width, onClose, children }: { anchor: React.RefObject<HTMLElement | null>; width: number; onClose: () => void; children: React.ReactNode }) {
+  const panel = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const place = useCallback(() => {
+    const r = anchor.current?.getBoundingClientRect();
+    if (r) setPos({ left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)), top: r.bottom + 6 });
+  }, [anchor, width]);
+  useLayoutEffect(place, [place]);
+  useEffect(() => {
+    const down = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!panel.current?.contains(t) && !anchor.current?.contains(t)) onClose();
+    };
+    const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const away = (e: Event) => !panel.current?.contains(e.target as Node) && onClose();
+    window.addEventListener("pointerdown", down, true);
+    window.addEventListener("keydown", key);
+    window.addEventListener("scroll", away, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("keydown", key);
+      window.removeEventListener("scroll", away, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [anchor, onClose, place]);
+  if (!pos) return null;
+  return createPortal(
+    <div ref={panel} className="pop-in fixed z-[100] panel shadow-xl" style={{ left: pos.left, top: pos.top, width, transformOrigin: "top left" }} onMouseDown={(e) => e.preventDefault()}>
+      {children}
+    </div>,
+    document.body
+  );
+}
+
 function Swatches({ editor, kind, onDone }: { editor: TEditor; kind: "fg" | "bg"; onDone: () => void }) {
+  const current = editor.getAttributes("colorText")[kind] as string | undefined;
   return (
-    <div className="pop-in absolute top-9 left-0 z-40 panel p-2 shadow-xl w-[204px]" onMouseDown={(e) => e.preventDefault()}>
-      <div className="grid grid-cols-8 gap-1">
+    <div className="p-2.5">
+      <div className="text-[11.5px] muted mb-2 px-0.5">{kind === "fg" ? "文字颜色" : "背景高亮"}</div>
+      <div className="grid grid-cols-8 gap-1.5">
         {PALETTE.map((p) => (
           <button
             key={p.id}
+            type="button"
             title={p.label}
+            aria-label={p.label}
             onClick={() => {
               editor.chain().focus().setColorText({ [kind]: p.id }).run();
               onDone();
             }}
-            className={cx("w-5 h-5 rounded border hairline flex items-center justify-center text-[11px] font-bold", kind === "fg" ? `fg-${p.id}` : `bg-${p.id}`)}
+            className={cx(
+              "w-6 h-6 rounded-md border hairline flex items-center justify-center text-[12px] font-semibold transition-transform hover:scale-110",
+              kind === "fg" ? `fg-${p.id}` : `bg-${p.id}`,
+              current === p.id && "ring-2 ring-[var(--focus)] ring-offset-1 ring-offset-[var(--panel)]"
+            )}
           >
             {kind === "fg" ? "A" : ""}
           </button>
         ))}
       </div>
       <button
-        className="mt-2 text-xs muted hover:underline flex items-center gap-1"
+        type="button"
+        disabled={!current}
+        className="mt-2.5 w-full h-7 rounded-md text-xs muted hover:bg-[var(--panel-2)] hover:text-[var(--text)] flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none"
         onClick={() => {
           editor.chain().focus().setColorText({ [kind]: null }).run();
           onDone();
         }}
       >
-        <Eraser size={12} /> 清除{kind === "fg" ? "文字颜色" : "背景高亮"}
+        <Eraser size={13} /> 清除{kind === "fg" ? "文字颜色" : "背景高亮"}
       </button>
     </div>
   );
@@ -434,6 +481,10 @@ function Toolbar({ editor, docId }: { editor: TEditor; docId: number }) {
   const [, force] = useState(0);
   const [pop, setPop] = useState<"fg" | "bg" | "callout" | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const fgRef = useRef<HTMLDivElement>(null);
+  const bgRef = useRef<HTMLDivElement>(null);
+  const calloutRef = useRef<HTMLDivElement>(null);
+  const closePop = useCallback(() => setPop(null), []);
   useEffect(() => {
     const f = () => force((x) => x + 1);
     editor.on("selectionUpdate", f);
@@ -448,7 +499,7 @@ function Toolbar({ editor, docId }: { editor: TEditor; docId: number }) {
   const block = editor.isActive("heading", { level: 1 }) ? "h1" : editor.isActive("heading", { level: 2 }) ? "h2" : editor.isActive("heading", { level: 3 }) ? "h3" : editor.isActive("heading", { level: 4 }) ? "h4" : "p";
 
   return (
-    <div className="mx-auto max-w-5xl px-3 pb-1.5 flex items-center gap-0.5 overflow-x-auto relative">
+    <div className="mx-auto max-w-5xl px-3 pb-1.5 flex items-center gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <TB title="撤销" on={() => c().undo().run()} disabled={!editor.can().undo()}><Undo2 size={16} /></TB>
       <TB title="重做" on={() => c().redo().run()} disabled={!editor.can().redo()}><Redo2 size={16} /></TB>
       <Sep />
@@ -475,14 +526,14 @@ function Toolbar({ editor, docId }: { editor: TEditor; docId: number }) {
       <TB title="斜体 ⌘I" active={editor.isActive("italic")} on={() => c().toggleItalic().run()}><Italic size={16} /></TB>
       <TB title="删除线" active={editor.isActive("strike")} on={() => c().toggleStrike().run()}><Strikethrough size={16} /></TB>
       <TB title="行内代码" active={editor.isActive("code")} on={() => c().toggleCode().run()}><Code size={16} /></TB>
-      <div className="relative">
-        <TB title="文字颜色" active={!!editor.getAttributes("colorText").fg} on={() => setPop(pop === "fg" ? null : "fg")}><Palette size={16} /></TB>
-        {pop === "fg" && <Swatches editor={editor} kind="fg" onDone={() => setPop(null)} />}
+      <div ref={fgRef} className="shrink-0">
+        <TB title="文字颜色" active={pop === "fg" || !!editor.getAttributes("colorText").fg} on={() => setPop(pop === "fg" ? null : "fg")}><Palette size={16} /></TB>
       </div>
-      <div className="relative">
-        <TB title="背景高亮" active={!!editor.getAttributes("colorText").bg} on={() => setPop(pop === "bg" ? null : "bg")}><Highlighter size={16} /></TB>
-        {pop === "bg" && <Swatches editor={editor} kind="bg" onDone={() => setPop(null)} />}
+      {pop === "fg" && <ToolPop anchor={fgRef} width={236} onClose={closePop}><Swatches editor={editor} kind="fg" onDone={closePop} /></ToolPop>}
+      <div ref={bgRef} className="shrink-0">
+        <TB title="背景高亮" active={pop === "bg" || !!editor.getAttributes("colorText").bg} on={() => setPop(pop === "bg" ? null : "bg")}><Highlighter size={16} /></TB>
       </div>
+      {pop === "bg" && <ToolPop anchor={bgRef} width={236} onClose={closePop}><Swatches editor={editor} kind="bg" onDone={closePop} /></ToolPop>}
       <TB
         title="链接"
         active={editor.isActive("link")}
@@ -510,23 +561,27 @@ function Toolbar({ editor, docId }: { editor: TEditor; docId: number }) {
           onChange={(e) => editor.chain().updateAttributes("codeBlock", { language: e.target.value.replace(/[^\w+#-]/g, "") || null }).run()}
         />
       )}
-      <div className="relative">
-        <TB title="提示块" active={editor.isActive("callout")} on={() => setPop(pop === "callout" ? null : "callout")}><MessageSquareWarning size={16} /></TB>
+      <div ref={calloutRef} className="shrink-0">
+        <TB title="提示块" active={pop === "callout" || editor.isActive("callout")} on={() => setPop(pop === "callout" ? null : "callout")}><MessageSquareWarning size={16} /></TB>
         {pop === "callout" && (
-          <div className="pop-in absolute top-9 left-0 z-40 panel p-1 shadow-xl w-28 text-sm" onMouseDown={(e) => e.preventDefault()}>
+          <ToolPop anchor={calloutRef} width={140} onClose={closePop}>
+            <div className="p-1 text-[13.5px]">
             {CALLOUT_TYPES.map((t) => (
               <button
                 key={t.id}
-                className="w-full text-left px-2 py-1 rounded hover:bg-[var(--panel-2)]"
+                type="button"
+                className="w-full flex items-center gap-2.5 text-left px-2.5 py-1.5 rounded-md hover:bg-[var(--panel-2)]"
                 onClick={() => {
                   c().insertCallout(t.id).run();
                   setPop(null);
                 }}
               >
+                <span className={`doc-callout-icon callout-${t.id}`} />
                 {t.label}
               </button>
             ))}
-          </div>
+            </div>
+          </ToolPop>
         )}
       </div>
       <TB title="折叠块" on={() => c().insertDetails().run()}><ChevronsUpDown size={16} /></TB>
