@@ -225,3 +225,21 @@ details[open]::details-content { block-size: auto; opacity: 1; }
 .doc a.xref { color: inherit; text-decoration: underline dotted; text-decoration-thickness: 1.5px; text-underline-offset: 4px;
   text-decoration-color: color-mix(in oklab, var(--color-inf-cyan) 85%, var(--text)); border-radius: 3px; }
 .doc a.xref:hover { background: var(--accent-soft); text-decoration-style: solid; }
+
+/* ===== form controls ===== */
+.select-trigger.input { padding-left: .7rem; padding-right: .6rem; cursor: pointer; }
+.select-trigger.select-open { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in oklab, var(--focus) 20%, transparent); }
+.btn-danger-solid { background: #d12c43; border-color: #d12c43; color: #fff; }
+.btn-danger-solid:hover { background: #b8243a; }
+.switch-track { position: relative; width: 30px; height: 18px; border-radius: 999px; background: var(--line); transition: background var(--dur) var(--ease-out); flex: none; }
+.switch-track.is-on { background: var(--color-inf-cyan); }
+.switch-thumb { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .25); transition: transform var(--dur) var(--ease-out); }
+.switch-track.is-on .switch-thumb { transform: translateX(12px); }
+.icon-btn { width: 2rem; height: 2rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--muted); }
+.icon-btn:hover { background: var(--panel-2); color: var(--text); }
+.icon-btn.danger:hover { color: #d12c43; background: color-mix(in oklab, #d12c43 10%, transparent); }
+.icon-btn:disabled { opacity: .4; }
+
+/* one page container everywhere, so the top bar, project tabs and content share the same left edge */
+.shell { width: 100%; max-width: 1280px; margin-inline: auto; padding-inline: 1rem; }
+@media (min-width: 640px) { .shell { padding-inline: 1.5rem; } }
