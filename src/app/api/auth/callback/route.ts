@@ -33,7 +33,7 @@ export async function GET(req: Request) {
   if (!st) return fail("state 无效或已使用，请重新登录。");
 
   const cfg = await getSsoConfig();
-  let tokenJson: { access_token?: string; token_type?: string };
+  let tokenJson: { access_token?: string; token_type?: string; error?: unknown };
   try {
     const body = new URLSearchParams({
       grant_type: "authorization_code",
@@ -54,12 +54,12 @@ export async function GET(req: Request) {
     });
     tokenJson = await res.json();
     if (!res.ok || !tokenJson.access_token) {
-      log.warn("auth.token.failed", { status: res.status });
-      return fail("换取令牌失败。", 502);
+      log.warn("auth.token.failed", { status: res.status, error: typeof tokenJson.error === "string" ? tokenJson.error : undefined });
+      return fail("换取令牌失败。", 500);
     }
   } catch (e) {
     log.error("auth.token.error", { error: String(e) });
-    return fail("无法连接 SSO 提供方。", 502);
+    return fail("无法连接 SSO 提供方。", 500);
   }
 
   let profile: unknown;
@@ -68,15 +68,15 @@ export async function GET(req: Request) {
       headers: { authorization: `Bearer ${tokenJson.access_token}`, accept: "application/json" },
       signal: AbortSignal.timeout(15000),
     });
-    if (!res.ok) return fail("读取用户资料失败。", 502);
+    if (!res.ok) return fail("读取用户资料失败。", 500);
     profile = await res.json();
   } catch {
-    return fail("读取用户资料失败。", 502);
+    return fail("读取用户资料失败。", 500);
   }
 
   const uid = pick(profile, cfg.fieldUid);
   const username = pick(profile, cfg.fieldUsername);
-  if ((typeof uid !== "string" && typeof uid !== "number") || !String(uid)) return fail(`资料中缺少稳定 UID 字段「${cfg.fieldUid}」。`, 502);
+  if ((typeof uid !== "string" && typeof uid !== "number") || !String(uid)) return fail(`资料中缺少稳定 UID 字段「${cfg.fieldUid}」。`, 500);
   const uname = typeof username === "string" && username ? username : `user-${String(uid).slice(0, 8)}`;
   const name = pick(profile, cfg.fieldName);
   const avatar = pick(profile, cfg.fieldAvatar);
