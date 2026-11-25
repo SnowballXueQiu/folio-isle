@@ -58,7 +58,7 @@ export default async function NotesPage({ params, searchParams }: { params: Prom
           </div>
         )}
         {notes.length === 0 && <Empty title="还没有随笔">{canEdit ? "在上方写下第一条想法。" : "编辑者发布的随笔会显示在这里。"}</Empty>}
-        <ol className="relative border-l hairline ml-3 space-y-6">
+        <ol className="stagger relative border-l hairline ml-3 space-y-6">
           {notes.map((n) => (
             <li key={n.id} className="pl-6 relative">
               <span className="absolute -left-[5px] top-2 w-2.5 h-2.5 rounded-full bg-[var(--color-inf-cyan)] ring-4 ring-[var(--bg)]" />

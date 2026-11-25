@@ -396,7 +396,7 @@ function Sep() {
 
 function Swatches({ editor, kind, onDone }: { editor: TEditor; kind: "fg" | "bg"; onDone: () => void }) {
   return (
-    <div className="absolute top-9 left-0 z-40 panel p-2 shadow-xl w-[204px]" onMouseDown={(e) => e.preventDefault()}>
+    <div className="pop-in absolute top-9 left-0 z-40 panel p-2 shadow-xl w-[204px]" onMouseDown={(e) => e.preventDefault()}>
       <div className="grid grid-cols-8 gap-1">
         {PALETTE.map((p) => (
           <button
@@ -506,7 +506,7 @@ function Toolbar({ editor, docId }: { editor: TEditor; docId: number }) {
       <div className="relative">
         <TB title="提示块" active={editor.isActive("callout")} on={() => setPop(pop === "callout" ? null : "callout")}><MessageSquareWarning size={16} /></TB>
         {pop === "callout" && (
-          <div className="absolute top-9 left-0 z-40 panel p-1 shadow-xl w-28 text-sm" onMouseDown={(e) => e.preventDefault()}>
+          <div className="pop-in absolute top-9 left-0 z-40 panel p-1 shadow-xl w-28 text-sm" onMouseDown={(e) => e.preventDefault()}>
             {CALLOUT_TYPES.map((t) => (
               <button
                 key={t.id}

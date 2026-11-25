@@ -36,7 +36,7 @@ export async function TopBar({ crumbs = [] }: { crumbs?: { href?: string; label:
                   <Avatar name={displayName(user)} url={user.avatar_url} />
                   <span className="text-sm hidden sm:inline">{displayName(user)}</span>
                 </summary>
-                <div className="absolute right-0 mt-2 w-44 panel p-1 shadow-lg text-sm">
+                <div className="pop-in absolute right-0 mt-2 w-44 panel p-1 shadow-lg text-sm">
                   <div className="px-3 py-2 muted text-xs">@{user.username}</div>
                   <Link href="/" className="block px-3 py-2 rounded-lg hover:bg-[var(--panel-2)]">我的项目</Link>
                   <form action="/api/auth/logout" method="post">

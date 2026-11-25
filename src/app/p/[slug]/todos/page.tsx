@@ -86,7 +86,7 @@ export default async function TodosPage({ params, searchParams }: { params: Prom
           <summary className={cx(pill(!!sp.assignee && !["me", "none"].includes(sp.assignee)), "list-none cursor-pointer")}>
             {members.find((m) => String(m.id) === sp.assignee)?.username ?? "按成员"} ▾
           </summary>
-          <div className="absolute z-10 mt-1 panel p-1 shadow-lg w-48 max-h-64 overflow-y-auto">
+          <div className="pop-in absolute z-10 mt-1 panel p-1 shadow-lg w-48 max-h-64 overflow-y-auto">
             {members.map((m) => (
               <Link key={m.id} href={q({ assignee: String(m.id) })} className="block px-3 py-1.5 text-sm rounded hover:bg-[var(--panel-2)]">{displayName(m)}</Link>
             ))}
@@ -101,7 +101,7 @@ export default async function TodosPage({ params, searchParams }: { params: Prom
       </div>
 
       <div className="grid lg:grid-cols-[1fr_340px] gap-6 mt-6">
-        <section className="space-y-2">
+        <section className="stagger space-y-2">
           {todos.length === 0 && <Empty title="没有符合条件的待办" />}
           {todos.map((t) => {
             const overdue = t.due_date && t.due_date < today && t.status !== "done";

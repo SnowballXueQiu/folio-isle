@@ -27,7 +27,7 @@ export function DocPicker({ options, initial = [], name = "docs" }: { options: D
         </button>
       </div>
       {open && (
-        <div className="absolute z-20 mt-1 w-full max-w-md panel p-2 shadow-xl">
+        <div className="pop-in absolute z-20 mt-1 w-full max-w-md panel p-2 shadow-xl">
           <input className="input h-8 text-sm" placeholder="搜索文档标题" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
           <div className="max-h-56 overflow-y-auto mt-1">
             {list.length === 0 && <div className="text-xs muted p-2">没有匹配的文档</div>}

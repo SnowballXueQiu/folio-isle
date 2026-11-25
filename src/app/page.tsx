@@ -76,9 +76,9 @@ export default async function Home() {
               {projects.length === 0 ? (
                 <Empty title="还没有项目">新建一个项目，或请项目管理员把你加为成员。</Empty>
               ) : (
-                <div className="grid sm:grid-cols-2 gap-3">
+                <div className="stagger grid sm:grid-cols-2 gap-3">
                   {projects.map((p) => (
-                    <Link key={p.slug} href={`/p/${p.slug}`} className="panel p-5 hover:border-[var(--muted)] transition-colors group">
+                    <Link key={p.slug} href={`/p/${p.slug}`} className="panel p-5 card-hover group">
                       <div className="flex items-start justify-between gap-2">
                         <div className="font-semibold group-hover:underline underline-offset-4">{p.name}</div>
                         <span className="chip">{ROLE_LABEL[p.role]}</span>
@@ -117,9 +117,9 @@ export default async function Home() {
           {publicLibs.length === 0 ? (
             <Empty title="暂无公开知识库">项目管理员可以在知识库设置中逐库公开。</Empty>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="stagger grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {publicLibs.map((l) => (
-                <Link key={l.id} href={`/p/${l.slug}/kb/${l.id}`} className="panel p-5 hover:border-[var(--muted)] transition-colors">
+                <Link key={l.id} href={`/p/${l.slug}/kb/${l.id}`} className="panel p-5 card-hover">
                   <div className="text-xs muted">{l.project}</div>
                   <div className="font-semibold mt-0.5">{l.name}</div>
                   <p className="muted text-sm mt-1 line-clamp-2">{l.description || "—"}</p>

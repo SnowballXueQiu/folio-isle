@@ -122,7 +122,7 @@ export default async function DocPage({ params, searchParams }: { params: Promis
             {role && <Link href={`/d/${id}/history`} className="btn btn-sm"><History size={14} /> 历史</Link>}
             <details className="relative">
               <summary className="btn btn-sm list-none"><Download size={14} /> 导出</summary>
-              <div className="absolute right-0 mt-1 w-48 panel p-1 shadow-lg z-10 text-sm text-[var(--text)]">
+              <div className="pop-in absolute right-0 mt-1 w-48 panel p-1 shadow-lg z-10 text-sm text-[var(--text)]">
                 <a className="block px-3 py-2 rounded hover:bg-[var(--panel-2)]" href={`/api/docs/${id}/export?v=${version.id}`}>Markdown (.md)</a>
                 <a className="block px-3 py-2 rounded hover:bg-[var(--panel-2)]" href={`/api/docs/${id}/export?v=${version.id}&format=zip`}>含图片打包 (.zip)</a>
               </div>

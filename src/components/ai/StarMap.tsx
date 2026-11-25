@@ -132,7 +132,7 @@ export function StarMap({ docs, edges, libraries }: { docs: MapDoc[]; edges: Map
           <div className="relative">
             <input className="input h-8 text-sm w-56 shadow-sm" placeholder="聚焦文档…" value={query} onChange={(e) => setQuery(e.target.value)} />
             {matches.length > 0 && (
-              <div className="absolute mt-1 w-72 panel p-1 shadow-xl">
+              <div className="pop-in absolute mt-1 w-72 panel p-1 shadow-xl">
                 {matches.map((d) => (
                   <button
                     key={d.id}

@@ -160,7 +160,7 @@ export function LibraryTree({
             onClick={() => toggle(n.id)}
             aria-label={isOpen ? "折叠" : "展开"}
           >
-            <ChevronRight size={14} className={cx("transition-transform", isOpen && "rotate-90")} />
+            <ChevronRight size={14} className={cx("transition-transform duration-200 ease-[var(--ease-out)]", isOpen && "rotate-90")} />
           </button>
           {n.kind === "group" ? (
             isOpen ? <FolderOpen size={15} className="shrink-0 muted" /> : <Folder size={15} className="shrink-0 muted" />
@@ -187,7 +187,7 @@ export function LibraryTree({
                 <MoreHorizontal size={14} />
               </button>
               {menu === n.id && (
-                <div className="absolute right-0 top-7 z-20 w-44 panel p-1 shadow-xl text-[13px] font-normal" onMouseLeave={() => setMenu(null)}>
+                <div className="pop-in absolute right-0 top-7 z-20 w-44 panel p-1 shadow-xl text-[13px] font-normal" onMouseLeave={() => setMenu(null)}>
                   <MenuItem onClick={() => create("doc", n.id)}>新建子文档</MenuItem>
                   <MenuItem onClick={() => create("group", n.id)}>新建子分组</MenuItem>
                   <MenuItem
@@ -226,10 +226,10 @@ export function LibraryTree({
             </div>
           )}
         </div>
-        {hasKids && isOpen && (
-          <ul>
-            {n.children.map((c) => renderRow(c, depth + 1))}
-          </ul>
+        {hasKids && (
+          <div className="reveal" data-open={isOpen}>
+            <ul inert={!isOpen}>{n.children.map((c) => renderRow(c, depth + 1))}</ul>
+          </div>
         )}
       </li>
     );

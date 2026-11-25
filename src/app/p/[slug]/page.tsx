@@ -27,9 +27,9 @@ export default async function ProjectHome({ params }: { params: Promise<{ slug: 
       {libs.length === 0 && !canEdit ? (
         <Empty title="没有可阅读的知识库">该项目暂无公开内容。</Empty>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="stagger grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {libs.map((l) => (
-            <Link key={l.id} href={`/p/${slug}/kb/${l.id}`} className="panel p-5 hover:border-[var(--muted)] transition-colors">
+            <Link key={l.id} href={`/p/${slug}/kb/${l.id}`} className="panel p-5 card-hover">
               <div className="flex items-center justify-between">
                 <div className="font-semibold">{l.name}</div>
                 <span className="chip">
