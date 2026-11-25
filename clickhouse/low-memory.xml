@@ -4,7 +4,6 @@
   <mark_cache_size>134217728</mark_cache_size>
   <uncompressed_cache_size>0</uncompressed_cache_size>
   <max_concurrent_queries>20</max_concurrent_queries>
-  <background_pool_size>2</background_pool_size>
   <background_schedule_pool_size>2</background_schedule_pool_size>
   <logger><level>warning</level><console>1</console></logger>
   <query_thread_log remove="1"/>

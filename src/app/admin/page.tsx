@@ -3,6 +3,7 @@ import { TopBar } from "@/components/TopBar";
 import { Avatar } from "@/components/Avatar";
 import { AuditView } from "@/components/AuditTable";
 import { ConfirmButton } from "@/components/SettingsBits";
+import { Pager } from "@/components/ui/Pager";
 import { Select } from "@/components/ui/Select";
 import { requireSiteAdmin, displayName } from "@/lib/auth";
 import { sql } from "@/lib/db";
@@ -43,7 +44,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <div className="border-b hairline bg-[var(--panel)]">
         <div className="shell pt-5">
           <h1 className="text-xl font-semibold">站点设置</h1>
-          <nav className="flex gap-6 mt-3">
+          <nav className="flex gap-6 mt-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4 sm:mx-0 sm:px-0">
             {TABS.map(([k, l]) => (
               <Link key={k} href={`/admin?tab=${k}`} className="tab" aria-current={tab === k ? "page" : undefined}>{l}</Link>
             ))}
@@ -66,7 +67,7 @@ async function SsoTab() {
   return (
     <form action={saveSso} className="panel p-6 space-y-5 max-w-3xl">
       <p className="text-sm muted">
-        第三方 OAuth2 SSO 是唯一登录入口（授权码 + PKCE S256 + 一次性 state）。回调地址：<code className="text-[var(--text)]">{appUrl()}/api/auth/callback</code>。站内按「提供方标识 + UID」识别用户，修改提供方标识会让已有用户重新建档。
+        第三方 OAuth2 SSO 是唯一登录入口（授权码 + PKCE S256 + 一次性 state）。回调地址：<code className="text-[var(--text)] break-all">{appUrl()}/api/auth/callback</code>。站内按「提供方标识 + UID」识别用户，修改提供方标识会让已有用户重新建档。
       </p>
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="提供方标识" name="providerId" defaultValue={c.providerId} />
@@ -146,6 +147,30 @@ async function AuditTab({ sp }: { sp: Record<string, string> }) {
   return <AuditView base="/admin" filter={filter} hidden={{ tab: "audit" }} rows={rows} total={total} pages={pages} page={page} showProject />;
 }
 
+const LOG_RANGES = [
+  { value: "1", label: "最近 1 小时" },
+  { value: "6", label: "最近 6 小时" },
+  { value: "24", label: "最近 24 小时" },
+  { value: "72", label: "最近 3 天" },
+  { value: "168", label: "最近 7 天" },
+  { value: "720", label: "最近 30 天" },
+];
+const LEVEL_TONE: Record<string, string> = {
+  error: "text-[#d12c43] bg-[color-mix(in_oklab,#d12c43_12%,transparent)]",
+  warn: "text-[#9a7500] dark:text-[#f2d94e] bg-[color-mix(in_oklab,#f2d94e_22%,transparent)]",
+  info: "text-[#0d6f77] dark:text-[#5fe0e7] bg-[var(--accent-soft)]",
+  debug: "muted bg-[var(--panel-2)]",
+};
+
+function prettyFields(raw: string) {
+  try {
+    const o = JSON.parse(raw) as Record<string, unknown>;
+    return Object.keys(o).length ? o : null;
+  } catch {
+    return raw ? { raw } : null;
+  }
+}
+
 async function LogsTab({ sp }: { sp: Record<string, string> }) {
   if (!process.env.CLICKHOUSE_URL) {
     return (
@@ -155,39 +180,70 @@ async function LogsTab({ sp }: { sp: Record<string, string> }) {
       </div>
     );
   }
-  let rows: Awaited<ReturnType<typeof queryLogs>> = [];
+  const hours = LOG_RANGES.some((r) => r.value === sp.hours) ? sp.hours : "24";
+  let data: Awaited<ReturnType<typeof queryLogs>> = null;
   let error = "";
   try {
-    rows = await queryLogs({ level: sp.level, service: sp.service, q: sp.q, hours: Number(sp.hours) || 24 });
+    data = await queryLogs({ level: sp.level, service: sp.service, q: sp.q, hours: Number(hours), page: Number(sp.page) || 1 });
   } catch (e) {
     error = String(e);
   }
+  const link = (patch: Record<string, string | undefined>) => {
+    const q = new URLSearchParams(Object.entries({ tab: "logs", level: sp.level, service: sp.service, q: sp.q, hours, ...patch }).filter(([, v]) => v) as [string, string][]);
+    return `/admin?${q}`;
+  };
+  const counts = data?.counts ?? {};
+  const all = Object.values(counts).reduce((a, b) => a + b, 0);
   return (
     <>
-      <form className="panel p-4 flex flex-wrap gap-3 items-end">
-        <input type="hidden" name="tab" value="logs" />
-        <div><label className="label">级别</label><Select name="level" className="w-28" defaultValue={sp.level ?? ""} options={[{ value: "", label: "全部" }, { value: "info", label: "info" }, { value: "warn", label: "warn" }, { value: "error", label: "error" }]} /></div>
-        <div><label className="label">服务</label><Select name="service" className="w-28" defaultValue={sp.service ?? ""} options={[{ value: "", label: "全部" }, { value: "web", label: "web" }, { value: "worker", label: "worker" }, { value: "migrate", label: "migrate" }]} /></div>
-        <div><label className="label">时间范围（小时）</label><input name="hours" type="number" min={1} max={720} defaultValue={sp.hours ?? "24"} className="input h-9 w-28" /></div>
-        <div className="flex-1 min-w-48"><label className="label">关键字</label><input name="q" defaultValue={sp.q} className="input h-9" /></div>
-        <button className="btn h-9">查询</button>
-      </form>
-      {error && <div className="mt-4 text-sm text-[#d12c43]">ClickHouse 不可用：{error}</div>}
-      <div className="panel mt-4 overflow-x-auto">
-        <table className="table-clean font-mono text-xs">
-          <tbody>
-            {(rows ?? []).map((r, i) => (
-              <tr key={i}>
-                <td className="whitespace-nowrap muted">{r.ts}</td>
-                <td className={cx(r.level === "error" && "text-[#d12c43]", r.level === "warn" && "text-[#b08a00]")}>{r.level}</td>
-                <td>{r.service}</td>
-                <td className="whitespace-nowrap">{r.event}</td>
-                <td className="break-all muted">{r.fields}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {[{ k: "", label: "全部", n: all }, ...["error", "warn", "info"].map((k) => ({ k, label: k, n: counts[k] ?? 0 }))].map((l) => (
+          <Link key={l.k} href={link({ level: l.k || undefined, page: undefined })} className={cx("chip !py-1 !px-3 !text-[13px]", (sp.level ?? "") === l.k && "!bg-[var(--text)] !text-[var(--bg)] !border-[var(--text)]")}>
+            {l.k && <span className={cx("w-1.5 h-1.5 rounded-full", l.k === "error" ? "bg-[#d12c43]" : l.k === "warn" ? "bg-[#e0b400]" : "bg-[#27b5bd]")} />}
+            {l.label}
+            <span className="tabular-nums opacity-70">{l.n}</span>
+          </Link>
+        ))}
       </div>
+      <form className="panel p-3 sm:p-4 grid grid-cols-2 md:grid-cols-[10rem_8rem_minmax(0,1fr)_auto] gap-3 items-end">
+        <input type="hidden" name="tab" value="logs" />
+        {sp.level && <input type="hidden" name="level" value={sp.level} />}
+        <div><label className="label">时间范围</label><Select name="hours" className="w-full" defaultValue={hours} options={LOG_RANGES} submitOnChange /></div>
+        <div><label className="label">服务</label><Select name="service" className="w-full" defaultValue={sp.service ?? ""} submitOnChange options={[{ value: "", label: "全部" }, { value: "web", label: "web" }, { value: "worker", label: "worker" }, { value: "migrate", label: "migrate" }]} /></div>
+        <div className="col-span-2 md:col-span-1"><label className="label">关键字</label><input name="q" defaultValue={sp.q} className="input" placeholder="事件名或字段内容，如 auth.login" autoComplete="off" data-1p-ignore /></div>
+        <button className="btn btn-primary col-span-2 md:col-span-1 justify-center">查询</button>
+      </form>
+      {error && <div className="panel mt-4 p-4 text-sm text-[#d12c43]">ClickHouse 暂不可用：{error.slice(0, 300)}</div>}
+      {data && (
+        <div className="panel mt-4">
+          {data.rows.length === 0 ? (
+            <div className="py-12 text-center text-sm muted">这段时间内没有符合条件的日志</div>
+          ) : (
+            <ul className="divide-y divide-[var(--line)]">
+              {data.rows.map((r, i) => {
+                const f = prettyFields(r.fields);
+                const brief = f ? Object.entries(f).filter(([, v]) => typeof v !== "object").slice(0, 4).map(([k, v]) => `${k}=${String(v)}`).join("  ") : "";
+                return (
+                  <li key={i}>
+                    <details>
+                      <summary className="list-none cursor-pointer grid grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[150px_52px_56px_minmax(0,220px)_minmax(0,1fr)] gap-x-3 gap-y-0.5 items-center px-4 py-2 text-xs hover:bg-[var(--panel-2)]">
+                        <time className="hidden md:block font-mono muted tabular-nums">{r.ts.slice(5, 19)}</time>
+                        <span className={cx("justify-self-start px-1.5 rounded font-medium font-mono text-[11px] leading-5", LEVEL_TONE[r.level] ?? LEVEL_TONE.debug)}>{r.level}</span>
+                        <span className="hidden md:block muted">{r.service}</span>
+                        <span className="font-mono font-medium truncate">{r.event}</span>
+                        <time className="md:hidden font-mono muted tabular-nums text-[11px]">{r.ts.slice(5, 16)}</time>
+                        <span className="col-span-3 md:col-span-1 font-mono muted truncate">{brief}</span>
+                      </summary>
+                      <pre className="mx-4 mb-3 mt-1 rounded-lg bg-[var(--panel-2)] p-3 whitespace-pre-wrap break-all text-[11.5px] leading-relaxed">{`${r.ts} · ${r.service}\n`}{f ? JSON.stringify(f, null, 2) : "（无字段）"}</pre>
+                    </details>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+      {data && <Pager page={data.page} pages={data.pages} total={data.total} href={(n) => link({ page: String(n) })} />}
     </>
   );
 }

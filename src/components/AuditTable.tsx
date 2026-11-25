@@ -31,7 +31,7 @@ export function AuditView({ base, filter, rows, total, pages, page, showProject,
   const objectHref = (r: AuditRow) => (r.obj_state === "ok" ? `/d/${r.object_id}` : null);
   return (
     <>
-      <form className="panel p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-[1.2fr_1fr_0.8fr_1.4fr_1fr_1fr_auto] gap-3 items-end">
+      <form className="panel p-3 sm:p-4 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-[1.2fr_1fr_0.8fr_1.4fr_1fr_1fr_auto] gap-3 items-end">
         {Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
         <div><label className="label">操作者</label><input name="actor" defaultValue={filter.actor} className="input" placeholder="用户名" autoComplete="off" data-1p-ignore /></div>
         <div>
@@ -45,7 +45,7 @@ export function AuditView({ base, filter, rows, total, pages, page, showProject,
         </div>
         <div><label className="label">起始</label><DatePicker name="from" defaultValue={filter.from} placeholder="不限" quick="past" /></div>
         <div><label className="label">截止</label><DatePicker name="to" defaultValue={filter.to} placeholder="不限" quick="past" /></div>
-        <button className="btn btn-primary"><Search size={15} /> 查询</button>
+        <button className="btn btn-primary col-span-2 md:col-span-1 justify-center"><Search size={15} /> 查询</button>
       </form>
 
       <div className="panel mt-4">
@@ -59,21 +59,26 @@ export function AuditView({ base, filter, rows, total, pages, page, showProject,
               return (
                 <li key={r.id}>
                   <details className="group/row">
-                    <summary className="list-none cursor-pointer flex items-center gap-3 px-4 h-11 text-sm hover:bg-[var(--panel-2)]">
-                      <time className="w-[118px] shrink-0 text-xs muted tabular-nums" title={fmtDate(r.created_at, true)}>{fmtDate(r.created_at, true)}</time>
-                      <span className="w-[128px] shrink-0 flex items-center gap-1.5 min-w-0">
-                        {r.actor ? <Avatar name={r.actor_name || r.actor} url={r.avatar} size={18} /> : null}
-                        <span className="truncate text-[13px]">{r.actor ? r.actor_name || r.actor : "系统"}</span>
+                    <summary className="list-none cursor-pointer grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 px-4 py-2.5 md:py-0 md:flex md:items-center md:gap-3 md:h-11 text-sm hover:bg-[var(--panel-2)]">
+                      <time className="order-2 md:order-none md:w-[118px] shrink-0 text-xs muted tabular-nums text-right md:text-left" title={fmtDate(r.created_at, true)}>{fmtDate(r.created_at, true)}</time>
+                      <span className="order-1 md:order-none flex items-center gap-2 min-w-0">
+                        <span className="md:w-[128px] shrink-0 flex items-center gap-1.5 min-w-0">
+                          {r.actor ? <Avatar name={r.actor_name || r.actor} url={r.avatar} size={18} /> : null}
+                          <span className="truncate text-[13px]">{r.actor ? r.actor_name || r.actor : "系统"}</span>
+                        </span>
+                        <span className="md:hidden font-medium text-[13px] truncate">{ACTION_LABELS[r.action] ?? r.action}</span>
                       </span>
-                      {showProject && <span className="w-[100px] shrink-0 truncate text-xs muted">{r.project ?? "—"}</span>}
-                      <span className="w-[112px] shrink-0 truncate font-medium text-[13px]">{ACTION_LABELS[r.action] ?? r.action}</span>
-                      <span className="w-[150px] shrink-0 truncate text-xs muted">
+                      {showProject && <span className="hidden md:inline w-[100px] shrink-0 truncate text-xs muted">{r.project ?? "—"}</span>}
+                      <span className="hidden md:inline w-[112px] shrink-0 truncate font-medium text-[13px]">{ACTION_LABELS[r.action] ?? r.action}</span>
+                      <span className="order-3 md:order-none col-span-2 md:w-[150px] shrink-0 truncate text-xs muted">
+                        {showProject && r.project && <span className="md:hidden">{r.project} · </span>}
                         {OBJECT_LABEL[r.object_type] ?? r.object_type}
                         {r.object_id && (href ? <Link className="ml-1 underline underline-offset-2 hover:text-[var(--text)]" href={href}>#{r.object_id}</Link> : <span className="ml-1">#{r.object_id.slice(0, 8)}</span>)}
                         {r.obj_state === "deleted" && <span className="ml-1.5 chip !py-0 !px-1.5 !text-[10.5px]" title="该对象已删除，可在项目设置的回收站中恢复">已删除</span>}
                         {r.obj_state === "missing" && <span className="ml-1.5 chip !py-0 !px-1.5 !text-[10.5px]">不存在</span>}
+                        {d && <span className="md:hidden"> · {d}</span>}
                       </span>
-                      <span className="flex-1 min-w-0 truncate text-xs muted">{d}</span>
+                      <span className="hidden md:block flex-1 min-w-0 truncate text-xs muted">{d}</span>
                     </summary>
                     <pre className="mx-4 mb-3 mt-1 rounded-lg bg-[var(--panel-2)] p-3 whitespace-pre-wrap break-all text-[11.5px] leading-relaxed">{JSON.stringify(r.detail, null, 2)}{r.ip && `\nIP: ${r.ip}`}</pre>
                   </details>

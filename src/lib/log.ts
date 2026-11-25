@@ -75,16 +75,25 @@ export const log = {
   error: (e: string, f?: Fields) => emit("error", e, f),
 };
 
-export async function queryLogs(opts: { level?: string; service?: string; q?: string; hours?: number; limit?: number }) {
+export const LOG_PAGE = 50;
+
+export async function queryLogs(opts: { level?: string; service?: string; q?: string; hours?: number; page?: number }) {
   if (!CH_URL) return null;
+  ready ??= ensureClickhouse();
+  await ready.catch((e) => ((ready = null), Promise.reject(e)));
   const where: string[] = [`ts > now() - INTERVAL ${Math.min(Math.max(opts.hours ?? 24, 1), 24 * 30)} HOUR`];
   const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-  if (opts.level) where.push(`level = '${esc(opts.level)}'`);
   if (opts.service) where.push(`service = '${esc(opts.service)}'`);
   if (opts.q) where.push(`(positionCaseInsensitive(event, '${esc(opts.q)}') > 0 OR positionCaseInsensitive(fields, '${esc(opts.q)}') > 0)`);
-  const res = await chQuery(
-    `SELECT ts, level, service, event, fields FROM ${CH_DB}.logs WHERE ${where.join(" AND ")} ORDER BY ts DESC LIMIT ${Math.min(opts.limit ?? 200, 1000)} FORMAT JSON`
-  );
-  const json = (await res.json()) as { data: { ts: string; level: string; service: string; event: string; fields: string }[] };
-  return json.data;
+  const base = where.join(" AND ");
+  const filtered = opts.level ? `${base} AND level = '${esc(opts.level)}'` : base;
+  const page = Math.max(1, opts.page ?? 1);
+  const [rowsRes, countRes] = await Promise.all([
+    chQuery(`SELECT toString(ts) AS ts_text, level, service, event, fields FROM ${CH_DB}.logs WHERE ${filtered} ORDER BY ts DESC LIMIT ${LOG_PAGE} OFFSET ${(page - 1) * LOG_PAGE} FORMAT JSON`),
+    chQuery(`SELECT level, count() AS n FROM ${CH_DB}.logs WHERE ${base} GROUP BY level FORMAT JSON`),
+  ]);
+  const rows = ((await rowsRes.json()) as { data: { ts_text: string; level: string; service: string; event: string; fields: string }[] }).data.map(({ ts_text, ...r }) => ({ ts: ts_text, ...r }));
+  const counts = Object.fromEntries(((await countRes.json()) as { data: { level: string; n: string }[] }).data.map((r) => [r.level, Number(r.n)]));
+  const total = opts.level ? counts[opts.level] ?? 0 : Object.values(counts).reduce((a, b) => a + b, 0);
+  return { rows, counts, total, page, pages: Math.max(1, Math.ceil(total / LOG_PAGE)) };
 }

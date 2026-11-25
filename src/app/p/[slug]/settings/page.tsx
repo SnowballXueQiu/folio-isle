@@ -35,15 +35,15 @@ const TRASH_PAGE = 10;
 
 function Section({ id, title, desc, action, children }: { id: string; title: string; desc?: React.ReactNode; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section id={id} className="panel scroll-mt-24">
-      <header className="flex items-start gap-4 px-6 pt-5 pb-4 border-b hairline">
+    <section id={id} className="panel scroll-mt-28">
+      <header className="flex items-start gap-4 px-4 sm:px-6 pt-5 pb-4 border-b hairline">
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold">{title}</h2>
           {desc && <p className="text-[13px] muted mt-1 leading-relaxed">{desc}</p>}
         </div>
         {action}
       </header>
-      <div className="px-6 py-5">{children}</div>
+      <div className="px-4 sm:px-6 py-5">{children}</div>
     </section>
   );
 }
@@ -112,8 +112,8 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   const trashCount = trashTotal + deadLibs.length;
 
   return (
-    <main className="shell py-8 grid lg:grid-cols-[200px_minmax(0,1fr)] gap-6 lg:gap-10">
-      <aside className="lg:sticky lg:top-24 self-start">
+    <main className="shell py-5 md:py-8 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[200px_minmax(0,1fr)] gap-4 md:gap-6 lg:gap-10">
+      <aside className="sticky top-[59px] lg:top-24 z-20 self-start min-w-0 -mx-4 px-4 py-2 lg:m-0 lg:p-0 bg-[color-mix(in_oklab,var(--bg)_90%,transparent)] backdrop-blur lg:bg-transparent lg:backdrop-blur-none">
         <SettingsNav counts={{ members: members.length, libraries: live.length, trash: trashCount }} />
       </aside>
 

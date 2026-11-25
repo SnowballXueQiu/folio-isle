@@ -63,7 +63,7 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   .field-error { margin-top: .35rem; font-size: .75rem; color: #d12c43; }
   .label { display: block; font-size: .8rem; font-weight: 500; color: var(--muted); margin-bottom: .3rem; }
   .chip { display: inline-flex; align-items: center; gap: .25rem; padding: .05rem .5rem; border-radius: 999px; font-size: .75rem; border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); }
-  .tab { padding: .55rem .2rem; font-size: .9rem; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tab { padding: .55rem .2rem; font-size: .9rem; white-space: nowrap; flex-shrink: 0; color: var(--muted); border-bottom: 2px solid transparent; }
   .tab[aria-current="page"] { color: var(--text); border-color: var(--text); font-weight: 600; }
   .inf-stripe { height: 3px; background: linear-gradient(90deg, var(--color-inf-cyan) 0 33.3%, var(--color-inf-yellow) 33.3% 66.6%, var(--color-inf-red) 66.6% 100%); }
   .table-clean { width: 100%; font-size: .875rem; }

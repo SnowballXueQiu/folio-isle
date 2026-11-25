@@ -28,7 +28,7 @@ export function SettingsNav({ counts }: { counts: Partial<Record<string, number>
     return () => io.disconnect();
   }, []);
   return (
-    <nav className="flex lg:flex-col gap-0.5 overflow-x-auto" aria-label="设置分区">
+    <nav className="flex lg:flex-col gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="设置分区">
       {ITEMS.map(({ id, label, icon: Icon }) => (
         <a
           key={id}

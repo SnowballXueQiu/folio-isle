@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { History, PencilLine, Download, Quote } from "lucide-react";
 import { TopBar } from "@/components/TopBar";
 import { ReaderLayout } from "@/components/ReaderLayout";
+import { MobileTabBar } from "@/components/MobileTabBar";
+import { projectTabs } from "@/lib/project-tabs";
 import { Outline } from "@/components/Outline";
 import { QuoteHighlighter } from "@/components/QuoteHighlighter";
 import { XrefHover } from "@/components/XrefHover";
@@ -41,7 +43,7 @@ export default async function DocPage({ params, searchParams }: { params: Promis
     return (
       <>
         <TopBar crumbs={[{ href: `/p/${project.slug}`, label: project.name }, { href: `/p/${project.slug}/kb/${library.id}`, label: library.name }]} />
-        <ReaderLayout slug={project.slug} library={library} libraries={libraries} items={items} currentId={node.id} canEdit={canEdit}>
+        <ReaderLayout slug={project.slug} library={library} libraries={libraries} items={items} currentId={node.id} canEdit={canEdit} mobileNav={<MobileTabBar slug={project.slug} tabs={projectTabs(role)} />}>
           <h1 className="text-2xl font-semibold">{node.title}</h1>
           <div className="panel divide-y divide-[var(--line)] mt-6 max-w-3xl">
             {kids.length === 0 && <div className="p-6 muted text-sm">该分组暂无内容。</div>}
@@ -104,7 +106,7 @@ export default async function DocPage({ params, searchParams }: { params: Promis
   return (
     <>
       <TopBar crumbs={[{ href: `/p/${project.slug}`, label: project.name }, { href: `/p/${project.slug}/kb/${library.id}`, label: library.name }]} />
-      <ReaderLayout slug={project.slug} library={library} libraries={libraries} items={items} currentId={id} canEdit={canEdit} outline={<Outline headings={headings} />}>
+      <ReaderLayout slug={project.slug} library={library} libraries={libraries} items={items} currentId={id} canEdit={canEdit} outline={<Outline headings={headings} />} mobileNav={<MobileTabBar slug={project.slug} tabs={projectTabs(role)} />}>
         <article className="max-w-3xl">
           {mode !== "published" && (
             <div className="mb-5 rounded-lg border border-[#f2e4a6] bg-[#fdf8e4] dark:bg-[#2f2a12] dark:border-[#4a4218] px-4 py-2.5 text-sm flex flex-wrap items-center gap-2">
