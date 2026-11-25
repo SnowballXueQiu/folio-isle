@@ -5,7 +5,7 @@ import { loadProject, projectRole, atLeast } from "@/lib/perms";
 import { createLibrary } from "@/app/actions/project";
 import { Empty } from "@/components/Empty";
 import { timeAgo } from "@/lib/util";
-import { Globe, Lock } from "lucide-react";
+import { Globe, Lock, BookMarked } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export default async function ProjectHome({ params }: { params: Promise<{ slug: 
     GROUP BY l.id ORDER BY l.position, l.id`;
   const canEdit = atLeast(role, "editor");
   return (
-    <main className="mx-auto max-w-[1400px] px-4 py-8">
+    <main className="shell py-8">
       {libs.length === 0 && !canEdit ? (
         <Empty title="没有可阅读的知识库">该项目暂无公开内容。</Empty>
       ) : (
@@ -32,7 +32,7 @@ export default async function ProjectHome({ params }: { params: Promise<{ slug: 
             <Link key={l.id} href={`/p/${slug}/kb/${l.id}`} className="panel p-5 card-hover">
               <div className="flex items-center justify-between">
                 <div className="font-semibold">{l.name}</div>
-                {l.is_glossary && <span className="chip ml-auto mr-1.5" title="其他知识库提到这里的词条时会自动交叉引用">📚 设定库</span>}
+                {l.is_glossary && <span className="chip ml-auto mr-1.5" title="其他知识库提到这里的词条时会自动交叉引用"><BookMarked size={12} /> 设定库</span>}
                 <span className="chip">
                   {l.is_public ? <Globe size={12} /> : <Lock size={12} />}
                   {l.is_public ? "公开" : "私有"}

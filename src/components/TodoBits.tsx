@@ -1,7 +1,10 @@
 "use client";
+import { Select } from "@/components/ui/Select";
 import { useTransition } from "react";
 import { setTodoStatus } from "@/app/actions/todos";
 import { cx } from "@/lib/util";
+
+const DOT: Record<string, string> = { todo: "bg-[var(--muted)]", doing: "bg-[var(--color-inf-cyan)]", done: "bg-[#2e8b45]" };
 
 const S = [
   { id: "todo", label: "待开始", cls: "bg-[var(--panel-2)]" },
@@ -14,16 +17,16 @@ export function StatusSelect({ projectId, todoId, status, canChange }: { project
   const cur = S.find((s) => s.id === status)!;
   if (!canChange) return <span className={cx("text-xs rounded-full px-2.5 py-1 font-medium", cur.cls)}>{cur.label}</span>;
   return (
-    <select
+    <Select
+      variant="ghost"
+      size="sm"
+      align="end"
       value={status}
       disabled={pending}
-      onChange={(e) => start(() => setTodoStatus(projectId, todoId, e.target.value))}
-      className={cx("text-xs rounded-full px-2 py-1 font-medium border-0 cursor-pointer", cur.cls)}
       aria-label="状态"
-    >
-      {S.map((s) => (
-        <option key={s.id} value={s.id}>{s.label}</option>
-      ))}
-    </select>
+      onChange={(v) => start(() => setTodoStatus(projectId, todoId, v))}
+      triggerClassName={cx("!h-7 !rounded-full !px-2.5 !text-xs font-medium gap-1", cur.cls)}
+      options={S.map((s) => ({ value: s.id, label: s.label, icon: <span className={cx("w-2 h-2 rounded-full", DOT[s.id])} /> }))}
+    />
   );
 }

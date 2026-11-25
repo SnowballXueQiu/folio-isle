@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/components/ui/dialogs";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Heart, MessageSquare } from "lucide-react";
@@ -35,13 +36,13 @@ export function Comments({ docId, comments, loggedIn, canModerate }: { docId: nu
 
   async function send(body: string, parentId: number | null) {
     const res = await fetch(`/api/docs/${docId}/comments`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ body, parentId }) });
-    if (!res.ok) return alert((await res.json()).error || "发送失败");
+    if (!res.ok) return toast((await res.json()).error || "发送失败", "error");
     setReply(null);
     router.refresh();
   }
   async function hide(id: number, hidden: boolean) {
     const res = await fetch(`/api/comments/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ hidden }) });
-    if (!res.ok) return alert((await res.json()).error || "操作失败");
+    if (!res.ok) return toast((await res.json()).error || "操作失败", "error");
     router.refresh();
   }
 

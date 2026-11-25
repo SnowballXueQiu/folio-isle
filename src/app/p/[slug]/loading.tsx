@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-6 fade-in" aria-busy>
+    <div className="shell py-6 fade-in" aria-busy>
       <div className="skeleton h-8 w-48" />
       <div className="mt-5 grid gap-3">
         {[0, 1, 2, 3].map((i) => (

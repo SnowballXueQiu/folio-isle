@@ -22,7 +22,7 @@ export function ReaderLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-[1400px] px-4 grid grid-cols-1 md:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_220px] gap-8">
+    <div className="shell grid grid-cols-1 md:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_220px] gap-8">
       <aside className="md:sticky md:top-[60px] md:h-[calc(100vh-60px)] md:overflow-y-auto py-6 md:border-r hairline md:pr-4">
         <Link href={`/p/${slug}/kb/${library.id}`} className="flex items-center gap-2 px-1 mb-3 font-semibold hover:underline underline-offset-4">
           {library.is_public ? <Globe size={14} className="muted" /> : <Lock size={14} className="muted" />}

@@ -7,7 +7,7 @@ export async function TopBar({ crumbs = [] }: { crumbs?: { href?: string; label:
   const user = await currentUser();
   return (
     <header className="sticky top-0 z-30 backdrop-blur bg-[color-mix(in_oklab,var(--bg)_85%,transparent)] border-b hairline">
-      <div className="mx-auto max-w-[1400px] h-14 px-4 flex items-center gap-3">
+      <div className="shell h-14 flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <img src="/logo.png" alt="Inf Network" className="w-7 h-7" />
           <span className="font-semibold tracking-tight">言屿</span>

@@ -14,7 +14,7 @@ export default async function ProjectLayout({ children, params }: { children: Re
     <>
       <TopBar crumbs={[{ href: `/p/${slug}`, label: project.name }]} />
       <div className="border-b hairline bg-[var(--panel)]">
-        <div className="mx-auto max-w-[1400px] px-4 pt-5">
+        <div className="shell pt-5">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-semibold">{project.name}</h1>
             {role && <span className="chip">{ROLE_LABEL[role]}</span>}

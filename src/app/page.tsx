@@ -39,7 +39,7 @@ export default async function Home() {
   return (
     <>
       <TopBar />
-      <main className="mx-auto max-w-6xl px-4 py-10">
+      <main className="shell py-10">
         {user ? (
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -97,7 +97,7 @@ export default async function Home() {
             <aside>
               <h2 className="text-sm font-semibold muted mb-3">分配给我的待办</h2>
               <div className="panel divide-y divide-[var(--line)]">
-                {myTodos.length === 0 && <div className="p-4 text-sm muted">没有未完成的待办 🎉</div>}
+                {myTodos.length === 0 && <div className="p-4 text-sm muted">没有未完成的待办</div>}
                 {myTodos.map((t) => (
                   <Link key={t.id} href={`/p/${t.slug}/todos?assignee=me`} className="block p-3 hover:bg-[var(--panel-2)]">
                     <div className="text-sm font-medium truncate">{t.title}</div>

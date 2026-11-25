@@ -52,7 +52,7 @@ export default async function AiLayout({ children, params }: { children: React.R
   const pr = await progress(sql, project.id, cfg.model);
   const pct = pr.total ? Math.round((pr.done / pr.total) * 100) : 100;
   return (
-    <main className="mx-auto max-w-[1400px] px-4 py-6">
+    <main className="shell py-6">
       <div className="flex flex-wrap items-center gap-4">
         <AiTabs slug={slug} />
         <div className="flex items-center gap-3 text-sm muted">

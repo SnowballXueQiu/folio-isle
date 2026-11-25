@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react";
 import Link from "next/link";
 import { currentUser, displayName } from "@/lib/auth";
 import { sql } from "@/lib/db";
@@ -36,7 +37,7 @@ export default async function NotesPage({ params, searchParams }: { params: Prom
     SELECT tag, count(*)::int n FROM notes, unnest(tags) tag WHERE project_id = ${project.id} AND archived_at IS NULL GROUP BY tag ORDER BY n DESC, tag LIMIT 30`;
 
   return (
-    <main className="mx-auto max-w-[1100px] px-4 py-8 grid lg:grid-cols-[1fr_260px] gap-8">
+    <main className="shell py-8 grid lg:grid-cols-[1fr_260px] gap-8">
       <section>
         {canEdit && !archived && (
           <form action={createNote.bind(null, project.id)} className="panel p-4 space-y-3 mb-6">
@@ -76,7 +77,7 @@ export default async function NotesPage({ params, searchParams }: { params: Prom
                       <Link key={t} href={`/p/${slug}/notes?tag=${encodeURIComponent(t)}`} className="chip hover:text-[var(--text)]">#{t}</Link>
                     ))}
                     {n.docs?.map((d) => (
-                      <Link key={d.id} href={`/d/${d.id}`} className="chip hover:text-[var(--text)]">📄 {d.title}</Link>
+                      <Link key={d.id} href={`/d/${d.id}`} className="chip hover:text-[var(--text)]"><FileText size={12} /> {d.title}</Link>
                     ))}
                   </div>
                 )}
@@ -113,7 +114,7 @@ export default async function NotesPage({ params, searchParams }: { params: Prom
             </div>
           </div>
         )}
-        <Link href={`/p/${slug}/notes${archived ? "" : "?archived=1"}`} className="text-sm muted hover:underline block">{archived ? "← 返回随笔" : "查看已归档"}</Link>
+        <Link href={`/p/${slug}/notes${archived ? "" : "?archived=1"}`} className="text-sm muted hover:underline block">{archived ? "返回随笔" : "查看已归档"}</Link>
       </aside>
     </main>
   );

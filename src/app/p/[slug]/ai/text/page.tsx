@@ -1,3 +1,4 @@
+import { Select } from "@/components/ui/Select";
 import Link from "next/link";
 import { currentUser } from "@/lib/auth";
 import { loadProject, requireProjectRole } from "@/lib/perms";
@@ -159,14 +160,8 @@ export default async function AiText({ params, searchParams }: { params: Promise
       <aside className="space-y-4">
         <form className="panel p-4 space-y-2 xl:sticky xl:top-20">
           <div className="font-semibold text-sm">查询任意两篇文档</div>
-          <select name="a" defaultValue={sp.a} className="input h-9 text-sm" required>
-            <option value="">选择文档 A</option>
-            {docs.map((d) => <option key={d.id} value={d.id}>{d.title} · {d.library}</option>)}
-          </select>
-          <select name="b" defaultValue={sp.b} className="input h-9 text-sm" required>
-            <option value="">选择文档 B</option>
-            {docs.map((d) => <option key={d.id} value={d.id}>{d.title} · {d.library}</option>)}
-          </select>
+          <Select name="a" className="w-full" size="sm" required searchable defaultValue={sp.a ?? ""} placeholder="选择文档 A" options={docs.map((d) => ({ value: String(d.id), label: d.title, hint: d.library }))} />
+          <Select name="b" className="w-full" size="sm" required searchable defaultValue={sp.b ?? ""} placeholder="选择文档 B" options={docs.map((d) => ({ value: String(d.id), label: d.title, hint: d.library }))} />
           <button className="btn btn-sm w-full justify-center">查看结论</button>
           {lookup && (
             <div className="pt-2">

@@ -1,4 +1,6 @@
 "use client";
+import { Select } from "@/components/ui/Select";
+import { confirmDialog, promptDialog, toast } from "@/components/ui/dialogs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -7,6 +9,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import {
   Bold, Italic, Strikethrough, Code, Link2, List, ListOrdered, ListChecks, Quote, SquareCode, Table2, ImagePlus,
   Minus, Undo2, Redo2, Palette, Highlighter, MessageSquareWarning, ChevronsUpDown, Eraser,
+  ArrowLeft,
 } from "lucide-react";
 import { baseExtensions, Callout, Details } from "./extensions";
 import { markdownToEditorHtml } from "@/lib/md/editor-html";
@@ -24,16 +27,18 @@ const MAX_WAIT = 20000;
 function CalloutView({ node, updateAttributes }: NodeViewProps) {
   return (
     <NodeViewWrapper className={`callout callout-${node.attrs.type}`} data-callout="">
-      <select
-        contentEditable={false}
-        value={node.attrs.type}
-        onChange={(e) => updateAttributes({ type: e.target.value })}
-        className="absolute right-2 top-2 text-xs bg-transparent border hairline rounded px-1 py-0.5"
-      >
-        {CALLOUT_TYPES.map((t) => (
-          <option key={t.id} value={t.id}>{t.label}</option>
-        ))}
-      </select>
+      <div contentEditable={false} className="absolute right-2 top-1.5">
+        <Select
+          variant="ghost"
+          size="sm"
+          align="end"
+          value={node.attrs.type}
+          aria-label="提示框类型"
+          onChange={(v) => void updateAttributes({ type: v })}
+          triggerClassName="!h-7 !text-xs"
+          options={CALLOUT_TYPES.map((t) => ({ value: t.id, label: t.label }))}
+        />
+      </div>
       <NodeViewContent />
     </NodeViewWrapper>
   );
@@ -190,7 +195,7 @@ export function DocEditor({
             const url = await uploadImage(docId, f);
             editorRef.current?.chain().focus().setImage({ src: url, alt: f.name }).run();
           } catch (e) {
-            alert((e as Error).message);
+            toast((e as Error).message, "error");
           }
         });
         return true;
@@ -204,7 +209,7 @@ export function DocEditor({
             const url = await uploadImage(docId, f);
             editorRef.current?.chain().focus().setImage({ src: url, alt: f.name }).run();
           } catch (e) {
-            alert((e as Error).message);
+            toast((e as Error).message, "error");
           }
         });
         return true;
@@ -279,9 +284,9 @@ export function DocEditor({
     await save(true);
   }
 
-  function resolveTakeServer() {
+  async function resolveTakeServer() {
     if (!conflict || !editor) return;
-    if (!confirm("放弃本地修改并载入服务器上的最新版本？（你的修改不会保存）")) return;
+    if (!(await confirmDialog({ title: "载入服务器上的最新版本？", body: "你的本地修改将被丢弃，不会保存。", confirmText: "放弃本地修改", danger: true }))) return;
     editor.commands.setContent(markdownToEditorHtml(conflict.content), { emitUpdate: false });
     setTitle(conflict.title);
     titleRef.current = conflict.title;
@@ -302,7 +307,7 @@ export function DocEditor({
     }
     const res = await fetch(`/api/docs/${docId}/publish`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
     setPublishing(false);
-    if (!res.ok) return alert((await res.json()).error || "发布失败");
+    if (!res.ok) return toast((await res.json()).error || "发布失败", "error");
     router.push(`/d/${docId}`);
     router.refresh();
   }
@@ -322,7 +327,7 @@ export function DocEditor({
       <div className="sticky top-0 z-30 bg-[var(--panel)] border-b hairline">
         <div className="mx-auto max-w-5xl px-4 h-12 flex items-center gap-3">
           <Link href={backHref} className="btn btn-ghost btn-sm" onClick={() => void save()}>
-            ← 返回
+            <ArrowLeft size={15} /> 返回
           </Link>
           <span className="flex items-center gap-1.5 text-xs muted truncate">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: dot[status.kind] }} />
@@ -447,22 +452,24 @@ function Toolbar({ editor, docId }: { editor: TEditor; docId: number }) {
       <TB title="撤销" on={() => c().undo().run()} disabled={!editor.can().undo()}><Undo2 size={16} /></TB>
       <TB title="重做" on={() => c().redo().run()} disabled={!editor.can().redo()}><Redo2 size={16} /></TB>
       <Sep />
-      <select
+      <Select
+        variant="ghost"
+        size="sm"
+        className="shrink-0 w-[92px]"
         value={block}
-        onChange={(e) => {
-          const v = e.target.value;
+        aria-label="段落样式"
+        onChange={(v) => {
           if (v === "p") c().setParagraph().run();
           else c().setHeading({ level: Number(v[1]) as 1 | 2 | 3 | 4 }).run();
         }}
-        className="h-8 text-sm bg-transparent rounded-md px-1 hover:bg-[var(--panel-2)] shrink-0"
-        aria-label="段落样式"
-      >
-        <option value="p">正文</option>
-        <option value="h1">标题 1</option>
-        <option value="h2">标题 2</option>
-        <option value="h3">标题 3</option>
-        <option value="h4">标题 4</option>
-      </select>
+        options={[
+          { value: "p", label: "正文" },
+          { value: "h1", label: "标题 1" },
+          { value: "h2", label: "标题 2" },
+          { value: "h3", label: "标题 3" },
+          { value: "h4", label: "标题 4" },
+        ]}
+      />
       <Sep />
       <TB title="加粗 ⌘B" active={editor.isActive("bold")} on={() => c().toggleBold().run()}><Bold size={16} /></TB>
       <TB title="斜体 ⌘I" active={editor.isActive("italic")} on={() => c().toggleItalic().run()}><Italic size={16} /></TB>
@@ -479,9 +486,9 @@ function Toolbar({ editor, docId }: { editor: TEditor; docId: number }) {
       <TB
         title="链接"
         active={editor.isActive("link")}
-        on={() => {
+        on={async () => {
           const prev = editor.getAttributes("link").href as string | undefined;
-          const url = prompt("链接地址（留空移除）", prev ?? "https://");
+          const url = await promptDialog({ title: prev ? "编辑链接" : "插入链接", body: "外部网址，或站内文档地址（如 /d/12）。留空则移除链接。", defaultValue: prev ?? "https://" });
           if (url === null) return;
           if (!url.trim()) c().unsetLink().run();
           else c().extendMarkRange("link").setLink({ href: url.trim() }).run();
@@ -539,7 +546,7 @@ function Toolbar({ editor, docId }: { editor: TEditor; docId: number }) {
             const url = await uploadImage(docId, f);
             c().setImage({ src: url, alt: f.name }).run();
           } catch (err) {
-            alert((err as Error).message);
+            toast((err as Error).message, "error");
           }
         }}
       />

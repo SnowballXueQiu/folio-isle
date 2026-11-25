@@ -1,3 +1,6 @@
+import { Select } from "@/components/ui/Select";
+import { NavSelect } from "@/components/ui/NavSelect";
+import { FileText } from "lucide-react";
 import Link from "next/link";
 import { currentUser, displayName } from "@/lib/auth";
 import { sql } from "@/lib/db";
@@ -26,12 +29,13 @@ function TodoForm({ action, members, docs, todo, submit }: { action: (f: FormDat
       <div className="grid sm:grid-cols-2 gap-3">
         <div>
           <label className="label">负责人</label>
-          <select name="assignee" className="input" defaultValue={todo?.assignee_id ?? ""}>
-            <option value="">未分配</option>
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>{displayName(m)} (@{m.username})</option>
-            ))}
-          </select>
+          <Select
+            name="assignee"
+            className="w-full"
+            defaultValue={todo?.assignee_id ? String(todo.assignee_id) : ""}
+            searchable={members.length > 5}
+            options={[{ value: "", label: "未分配" }, ...members.map((m) => ({ value: String(m.id), label: displayName(m), hint: `@${m.username}` }))]}
+          />
         </div>
         <div>
           <label className="label">截止日期</label>
@@ -77,27 +81,26 @@ export default async function TodosPage({ params, searchParams }: { params: Prom
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <main className="mx-auto max-w-[1100px] px-4 py-8">
+    <main className="shell py-8">
       <div className="flex flex-wrap gap-2 items-center">
         <Link href={q({ assignee: null })} className={pill(!sp.assignee)}>全部</Link>
         <Link href={q({ assignee: "me" })} className={pill(sp.assignee === "me")}>我负责的</Link>
         <Link href={q({ assignee: "none" })} className={pill(sp.assignee === "none")}>未分配</Link>
-        <details className="relative">
-          <summary className={cx(pill(!!sp.assignee && !["me", "none"].includes(sp.assignee)), "list-none cursor-pointer")}>
-            {members.find((m) => String(m.id) === sp.assignee)?.username ?? "按成员"} ▾
-          </summary>
-          <div className="pop-in absolute z-10 mt-1 panel p-1 shadow-lg w-48 max-h-64 overflow-y-auto">
-            {members.map((m) => (
-              <Link key={m.id} href={q({ assignee: String(m.id) })} className="block px-3 py-1.5 text-sm rounded hover:bg-[var(--panel-2)]">{displayName(m)}</Link>
-            ))}
-          </div>
-        </details>
+        <NavSelect
+          size="sm"
+          value={sp.assignee && !["me", "none"].includes(sp.assignee) ? sp.assignee : ""}
+          placeholder="按成员"
+          minWidth={200}
+          aria-label="按成员筛选"
+          triggerClassName={cx("!rounded-full !h-8", !!sp.assignee && !["me", "none"].includes(sp.assignee) && "!bg-[var(--text)] !text-[var(--bg)] !border-[var(--text)]")}
+          options={members.map((m) => ({ value: String(m.id), label: displayName(m), hint: `@${m.username}`, href: q({ assignee: String(m.id) }) }))}
+        />
         <span className="w-px h-5 bg-[var(--line)] mx-1" />
         {[["", "所有状态"], ["todo", "待开始"], ["doing", "进行中"], ["done", "已完成"]].map(([k, l]) => (
           <Link key={k} href={q({ status: k || null })} className={pill((sp.status ?? "") === k)}>{l}</Link>
         ))}
         <span className="flex-1" />
-        <Link href={q({ archived: archived ? null : "1" })} className="text-sm muted hover:underline">{archived ? "← 返回进行中的待办" : "查看已归档"}</Link>
+        <Link href={q({ archived: archived ? null : "1" })} className="text-sm muted hover:underline">{archived ? "返回进行中的待办" : "查看已归档"}</Link>
       </div>
 
       <div className="grid lg:grid-cols-[1fr_340px] gap-6 mt-6">
@@ -117,7 +120,7 @@ export default async function TodosPage({ params, searchParams }: { params: Prom
                       </span>
                       {t.due_date && <span className={cx(overdue && "text-[#d12c43] font-medium")}>截止 {t.due_date}{overdue && "（已逾期）"}</span>}
                       {t.docs?.map((d) => (
-                        <Link key={d.id} href={`/d/${d.id}`} className="underline underline-offset-2 hover:text-[var(--text)]">📄 {d.title}</Link>
+                        <Link key={d.id} href={`/d/${d.id}`} className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-[var(--text)]"><FileText size={12} /> {d.title}</Link>
                       ))}
                     </div>
                   </div>

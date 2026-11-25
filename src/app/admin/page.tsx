@@ -3,6 +3,7 @@ import { TopBar } from "@/components/TopBar";
 import { Avatar } from "@/components/Avatar";
 import { AuditView } from "@/components/AuditTable";
 import { ConfirmButton } from "@/components/SettingsBits";
+import { Select } from "@/components/ui/Select";
 import { requireSiteAdmin, displayName } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { getSsoConfig, publicAiConfig, appUrl } from "@/lib/settings";
@@ -40,7 +41,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     <>
       <TopBar crumbs={[{ label: "站点设置" }]} />
       <div className="border-b hairline bg-[var(--panel)]">
-        <div className="mx-auto max-w-[1200px] px-4 pt-5">
+        <div className="shell pt-5">
           <h1 className="text-xl font-semibold">站点设置</h1>
           <nav className="flex gap-6 mt-3">
             {TABS.map(([k, l]) => (
@@ -49,7 +50,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           </nav>
         </div>
       </div>
-      <main className="mx-auto max-w-[1200px] px-4 py-8">
+      <main className="shell py-8">
         {tab === "sso" && <SsoTab />}
         {tab === "ai" && <AiTab />}
         {tab === "users" && <UsersTab meId={me.id} />}
@@ -141,8 +142,8 @@ async function UsersTab({ meId }: { meId: number }) {
 
 async function AuditTab({ sp }: { sp: Record<string, string> }) {
   const filter: AuditFilter = { actor: sp.actor, objectType: sp.objectType, objectId: sp.objectId, action: sp.action, from: sp.from, to: sp.to };
-  const { rows, hasMore, page } = await queryAudit({ ...filter, page: Number(sp.page) || 1 });
-  return <AuditView base="/admin" filter={filter} hidden={{ tab: "audit" }} rows={rows} hasMore={hasMore} page={page} showProject />;
+  const { rows, total, page, pages } = await queryAudit({ ...filter, page: Number(sp.page) || 1 });
+  return <AuditView base="/admin" filter={filter} hidden={{ tab: "audit" }} rows={rows} total={total} pages={pages} page={page} showProject />;
 }
 
 async function LogsTab({ sp }: { sp: Record<string, string> }) {
@@ -165,8 +166,8 @@ async function LogsTab({ sp }: { sp: Record<string, string> }) {
     <>
       <form className="panel p-4 flex flex-wrap gap-3 items-end">
         <input type="hidden" name="tab" value="logs" />
-        <div><label className="label">级别</label><select name="level" defaultValue={sp.level ?? ""} className="input h-9 w-28"><option value="">全部</option><option>info</option><option>warn</option><option>error</option></select></div>
-        <div><label className="label">服务</label><select name="service" defaultValue={sp.service ?? ""} className="input h-9 w-28"><option value="">全部</option><option>web</option><option>worker</option></select></div>
+        <div><label className="label">级别</label><Select name="level" className="w-28" defaultValue={sp.level ?? ""} options={[{ value: "", label: "全部" }, { value: "info", label: "info" }, { value: "warn", label: "warn" }, { value: "error", label: "error" }]} /></div>
+        <div><label className="label">服务</label><Select name="service" className="w-28" defaultValue={sp.service ?? ""} options={[{ value: "", label: "全部" }, { value: "web", label: "web" }, { value: "worker", label: "worker" }, { value: "migrate", label: "migrate" }]} /></div>
         <div><label className="label">时间范围（小时）</label><input name="hours" type="number" min={1} max={720} defaultValue={sp.hours ?? "24"} className="input h-9 w-28" /></div>
         <div className="flex-1 min-w-48"><label className="label">关键字</label><input name="q" defaultValue={sp.q} className="input h-9" /></div>
         <button className="btn h-9">查询</button>

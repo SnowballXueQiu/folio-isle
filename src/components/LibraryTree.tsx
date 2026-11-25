@@ -1,4 +1,5 @@
 "use client";
+import { confirmDialog, promptDialog, toast } from "@/components/ui/dialogs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -72,7 +73,7 @@ export function LibraryTree({
       await fn();
       router.refresh();
     } catch (e) {
-      alert((e as Error).message);
+      toast((e as Error).message, "error");
     } finally {
       setBusy(false);
       setMenu(null);
@@ -80,7 +81,7 @@ export function LibraryTree({
   }
 
   async function create(kind: "doc" | "group", parentId: number | null) {
-    const title = prompt(kind === "doc" ? "文档标题" : "分组名称", kind === "doc" ? "未命名文档" : "新分组");
+    const title = await promptDialog({ title: kind === "doc" ? "新建文档" : "新建分组", placeholder: kind === "doc" ? "文档标题" : "分组名称", defaultValue: kind === "doc" ? "未命名文档" : "新分组", confirmText: "创建" });
     if (!title?.trim()) return;
     await run(async () => {
       const { id } = await api(`/api/libraries/${libraryId}/nodes`, "POST", { parentId, kind, title: title.trim() });
@@ -191,8 +192,9 @@ export function LibraryTree({
                   <MenuItem onClick={() => create("doc", n.id)}>新建子文档</MenuItem>
                   <MenuItem onClick={() => create("group", n.id)}>新建子分组</MenuItem>
                   <MenuItem
-                    onClick={() => {
-                      const title = prompt("重命名", n.title);
+                    onClick={async () => {
+                      setMenu(null);
+                      const title = await promptDialog({ title: "重命名", defaultValue: n.title, confirmText: "保存" });
                       if (title?.trim() && title.trim() !== n.title) run(() => api(`/api/nodes/${n.id}`, "PATCH", { title: title.trim() }));
                     }}
                   >
@@ -215,7 +217,8 @@ export function LibraryTree({
                     <MenuItem
                       danger
                       onClick={() => {
-                        if (confirm(`删除「${n.title}」${hasKids ? "及其所有子节点" : ""}？管理员可在设置 → 回收站中恢复。`)) run(() => api(`/api/nodes/${n.id}`, "DELETE"));
+                        setMenu(null);
+                        void confirmDialog({ title: `删除「${n.title}」${hasKids ? "及其所有子节点" : ""}？`, body: "管理员可在 设置 → 回收站 中恢复。", danger: true }).then((ok) => void (ok && run(() => api(`/api/nodes/${n.id}`, "DELETE"))));
                       }}
                     >
                       删除
