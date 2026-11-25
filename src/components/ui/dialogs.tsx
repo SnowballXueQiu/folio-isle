@@ -26,10 +26,14 @@ function ensureHost() {
   root = createRoot(el);
   root.render(<Host />);
 }
+// Always deferred to a macrotask so the update never joins a caller's pending transition
+// (an async transition would hold it back until the action finishes).
 function whenReady(fn: () => void) {
-  ensureHost();
-  if (pushDialog) fn();
-  else queued.push(fn);
+  setTimeout(() => {
+    ensureHost();
+    if (pushDialog) fn();
+    else queued.push(fn);
+  }, 0);
 }
 
 export function confirmDialog(o: { title: string; body?: string; confirmText?: string; danger?: boolean }): Promise<boolean> {

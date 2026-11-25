@@ -1,5 +1,6 @@
 "use client";
 import { useOptimistic, useTransition } from "react";
+import { Loader2 } from "lucide-react";
 import { confirmDialog, toast } from "./dialogs";
 import { cx } from "@/lib/util";
 
@@ -34,9 +35,24 @@ export function ActionButton({
   title?: string;
 }) {
   const [pending, start] = useTransition();
+  const iconOnly = className.includes("icon-btn");
   return (
-    <button type="button" title={title} aria-label={title} className={className} disabled={pending} onClick={() => start(async () => void (await run(action, confirm, success)))}>
-      {children}
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      aria-busy={pending}
+      className={cx(className, pending && "is-busy")}
+      disabled={pending}
+      onClick={async () => {
+        // Ask BEFORE entering the transition: React holds back other transition renders while an
+        // async action is pending, which would keep the dialog from ever appearing.
+        if (confirm && !(await confirmDialog(confirm))) return;
+        start(async () => void (await run(action, undefined, success)));
+      }}
+    >
+      {pending && <Loader2 size={iconOnly ? 15 : 14} className="animate-spin shrink-0" />}
+      {!(pending && iconOnly) && children}
     </button>
   );
 }
@@ -65,15 +81,16 @@ export function ActionSwitch({
       role="switch"
       aria-checked={on}
       disabled={pending}
-      onClick={() =>
+      onClick={async () => {
+        const next = !on;
+        const ask = next ? confirmOn : confirmOff;
+        if (ask && !(await confirmDialog(ask))) return;
         start(async () => {
-          const next = !on;
-          if (!(await (next ? !confirmOn || confirmDialog(confirmOn) : !confirmOff || confirmDialog(confirmOff)))) return;
           setOn(next);
           await run(() => action(next));
-        })
-      }
-      className={cx("group inline-flex items-center gap-2 text-[13px] select-none rounded-md px-1.5 py-1 hover:bg-[var(--panel-2)]", on ? "text-[var(--text)]" : "muted")}
+        });
+      }}
+      className={cx("group inline-flex items-center gap-2 text-[13px] select-none", pending && "is-busy", " rounded-md px-1.5 py-1 hover:bg-[var(--panel-2)]", on ? "text-[var(--text)]" : "muted")}
     >
       {icon}
       <span>{label}</span>

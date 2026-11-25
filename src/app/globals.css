@@ -243,3 +243,6 @@ details[open]::details-content { block-size: auto; opacity: 1; }
 /* one page container everywhere, so the top bar, project tabs and content share the same left edge */
 .shell { width: 100%; max-width: 1280px; margin-inline: auto; padding-inline: 1rem; }
 @media (min-width: 640px) { .shell { padding-inline: 1.5rem; } }
+
+/* busy state for action buttons: stays readable, shows a spinner, blocks clicks */
+.btn.is-busy:disabled, .icon-btn.is-busy:disabled, [role="switch"].is-busy:disabled { opacity: .78; cursor: progress; }

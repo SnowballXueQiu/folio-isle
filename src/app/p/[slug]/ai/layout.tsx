@@ -5,7 +5,7 @@ import { currentDocs, progress } from "@/lib/ai/plan";
 import { sql } from "@/lib/db";
 import { enableAi } from "@/app/actions/ai";
 import { AiTabs } from "@/components/ai/AiTabs";
-import { ConfirmButton } from "@/components/SettingsBits";
+import { ActionButton } from "@/components/ui/controls";
 
 export const dynamic = "force-dynamic";
 
@@ -36,9 +36,14 @@ export default async function AiLayout({ children, params }: { children: React.R
                 <div><span className="muted">计算量：</span>{docs.length} 篇单篇分析 + {(docs.length * (docs.length - 1)) / 2} 个文档对 + 总结。</div>
               </div>
               <div className="mt-6">
-                <ConfirmButton className="btn btn-primary" action={enableAi.bind(null, project.id)} confirmText={`确认将本项目已发布文档（含私有知识库）发送至 ${cfg.providerName} 进行分析？`}>
+                <ActionButton
+                  className="btn btn-primary"
+                  action={enableAi.bind(null, project.id)}
+                  confirm={{ title: "启用 AI 分析？", body: `本项目已发布的文档（包括私有知识库）会发送至 ${cfg.providerName} 进行分析。之后可随时在此关闭。`, confirmText: "启用" }}
+                  success="已启用，正在后台分析"
+                >
                   我已了解发送范围，启用 AI 分析
-                </ConfirmButton>
+                </ActionButton>
               </div>
             </>
           ) : (
