@@ -15,24 +15,44 @@ async function ctxFor(projectId: number, need: Role) {
   return { user, role: role!, ctx: { actorId: user.id, projectId, ip: await clientIp() } };
 }
 
-export async function createProject(form: FormData) {
+export type CreateProjectState = { error?: string; field?: "name" | "slug" | "description"; values?: Record<string, string> } | null;
+
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
+
+async function slugTaken(slug: string) {
+  const [row] = await sql`SELECT 1 FROM projects WHERE slug = ${slug}`;
+  return !!row;
+}
+
+export async function createProject(_prev: CreateProjectState, form: FormData): Promise<CreateProjectState> {
   const user = await requireUser("/p/new");
-  const data = z
+  const values = { name: String(form.get("name") ?? ""), slug: String(form.get("slug") ?? ""), description: String(form.get("description") ?? "") };
+  const parsed = z
     .object({
-      name: z.string().trim().min(1).max(60),
-      slug: z.string().trim().toLowerCase().regex(/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/, "标识需为 3-40 位小写字母、数字或连字符"),
-      description: z.string().trim().max(300).default(""),
+      name: z.string().trim().min(1, "请填写项目名称").max(60, "项目名称最多 60 个字"),
+      slug: z.string().trim().toLowerCase().regex(SLUG_RE, "链接标识需为 3-40 位小写字母、数字或连字符，且不能以连字符开头或结尾"),
+      description: z.string().trim().max(300, "简介最多 300 字").default(""),
     })
-    .parse(Object.fromEntries(form));
-  const [exists] = await sql`SELECT 1 FROM projects WHERE slug = ${data.slug}`;
-  if (exists) redirect(`/p/new?error=${encodeURIComponent("该标识已被使用")}`);
-  await tx(async (t) => {
-    const [p] = await t<{ id: number }[]>`INSERT INTO projects (slug, name, description, created_by) VALUES (${data.slug}, ${data.name}, ${data.description}, ${user.id}) RETURNING id`;
-    await t`INSERT INTO project_members (project_id, user_id, role) VALUES (${p.id}, ${user.id}, 'admin')`;
-    const [l] = await t<{ id: number }[]>`INSERT INTO libraries (project_id, name, description, created_by) VALUES (${p.id}, '默认知识库', '', ${user.id}) RETURNING id`;
-    await audit(t, { projectId: p.id, actorId: user.id, objectType: "project", objectId: p.id, action: "project.create", detail: { name: data.name, slug: data.slug }, ip: await clientIp() });
-    await audit(t, { projectId: p.id, actorId: user.id, objectType: "library", objectId: l.id, action: "library.create", detail: { name: "默认知识库" } });
-  });
+    .safeParse(values);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { error: issue.message, field: issue.path[0] as "name" | "slug" | "description", values };
+  }
+  const data = parsed.data;
+  if (await slugTaken(data.slug)) return { error: `「${data.slug}」已被其他项目使用，换一个吧`, field: "slug", values };
+  try {
+    await tx(async (t) => {
+      const [p] = await t<{ id: number }[]>`INSERT INTO projects (slug, name, description, created_by) VALUES (${data.slug}, ${data.name}, ${data.description}, ${user.id}) RETURNING id`;
+      await t`INSERT INTO project_members (project_id, user_id, role) VALUES (${p.id}, ${user.id}, 'admin')`;
+      const [l] = await t<{ id: number }[]>`INSERT INTO libraries (project_id, name, description, created_by) VALUES (${p.id}, '默认知识库', '', ${user.id}) RETURNING id`;
+      await audit(t, { projectId: p.id, actorId: user.id, objectType: "project", objectId: p.id, action: "project.create", detail: { name: data.name, slug: data.slug }, ip: await clientIp() });
+      await audit(t, { projectId: p.id, actorId: user.id, objectType: "library", objectId: l.id, action: "library.create", detail: { name: "默认知识库" } });
+    });
+  } catch (e) {
+    // lost a race on the unique slug
+    if ((e as { code?: string }).code === "23505") return { error: `「${data.slug}」已被其他项目使用，换一个吧`, field: "slug", values };
+    throw e;
+  }
   redirect(`/p/${data.slug}`);
 }
 
