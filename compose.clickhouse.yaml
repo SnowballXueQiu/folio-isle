@@ -21,8 +21,10 @@ services:
       CLICKHOUSE_USER: folio
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD in .env}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "0"
+    mem_limit: 1g
     volumes:
       - folio-clickhouse:/var/lib/clickhouse
+      - ./clickhouse/low-memory.xml:/etc/clickhouse-server/config.d/low-memory.xml:ro,Z
     ulimits:
       nofile: { soft: 262144, hard: 262144 }
     healthcheck:
