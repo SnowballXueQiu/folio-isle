@@ -8,9 +8,9 @@ import { Pager } from "@/components/ui/Pager";
 import { Avatar } from "@/components/Avatar";
 import { DatePicker } from "@/components/ui/DatePicker";
 
-const OBJECT_LABEL: Record<string, string> = { doc: "文档", node: "目录节点", library: "知识库", member: "成员", comment: "评论", todo: "待办", note: "随笔", attachment: "附件", ai: "AI", project: "项目", settings: "站点设置", user: "用户" };
+const OBJECT_LABEL: Record<string, string> = { doc: "文档", node: "目录节点", library: "知识库", member: "成员", comment: "评论", todo: "待办", note: "随笔", attachment: "附件", ai: "AI", project: "项目", settings: "站点设置", user: "用户", token: "MCP 令牌" };
 const OBJECT_TYPES = Object.keys(OBJECT_LABEL);
-const KEY_LABEL: Record<string, string> = { title: "标题", name: "名称", version_id: "版本", from: "原", to: "新", role: "角色", username: "用户", is_public: "公开", is_glossary: "设定库", bytes: "字节", library_id: "知识库", size: "大小", mime: "类型", node_id: "节点", count: "数量", split_from: "拆分自" };
+const KEY_LABEL: Record<string, string> = { title: "标题", name: "名称", version_id: "版本", from: "原", to: "新", role: "角色", username: "用户", is_public: "公开", is_glossary: "设定库", bytes: "字节", library_id: "知识库", size: "大小", mime: "类型", node_id: "节点", count: "数量", split_from: "拆分自", include_private: "含私有库" };
 
 /** One-line, human-readable digest of an audit detail object. */
 function digest(d: Record<string, unknown>) {

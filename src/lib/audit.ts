@@ -68,4 +68,6 @@ export const ACTION_LABELS: Record<string, string> = {
   "settings.ai": "修改 AI 提供方",
   "user.admin": "调整站点管理员",
   "user.login": "登录",
+  "token.create": "创建 MCP 令牌",
+  "token.revoke": "吊销 MCP 令牌",
 };

@@ -11,6 +11,8 @@ import { ActionButton, ActionSwitch } from "@/components/ui/controls";
 import { Select } from "@/components/ui/Select";
 import { Pager } from "@/components/ui/Pager";
 import { Avatar } from "@/components/Avatar";
+import { McpTokens, type TokenRow } from "@/components/McpTokens";
+import { appUrl } from "@/lib/settings";
 import { fmtDate, cx } from "@/lib/util";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +57,10 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   const user = await currentUser();
   await requireProjectRole(user, project, "admin");
   const members = await projectMembers(project.id);
+  const tokens = await sql<TokenRow[]>`
+    SELECT t.id, t.name, t.token_hint AS hint, t.include_private, t.created_at::text, t.last_used_at::text, t.use_count, coalesce(u.display_name, u.username) AS creator
+    FROM project_tokens t LEFT JOIN users u ON u.id = t.created_by
+    WHERE t.project_id = ${project.id} AND t.revoked_at IS NULL ORDER BY t.id DESC`;
   const libs = await sql<{ id: number; name: string; is_public: boolean; is_glossary: boolean; deleted_at: Date | null; docs: number }[]>`
     SELECT l.id, l.name, l.is_public, l.is_glossary, l.deleted_at,
       (SELECT count(*)::int FROM nodes n WHERE n.library_id = l.id AND n.deleted_at IS NULL AND n.kind = 'doc') AS docs
@@ -191,6 +197,10 @@ export default async function SettingsPage({ params, searchParams }: { params: P
               </li>
             ))}
           </ul>
+        </Section>
+
+        <Section id="mcp" title="MCP 接入" desc="让 Claude、Cursor 等 AI 客户端通过 MCP 直接把本项目的已发布文档当作语料库检索和阅读。令牌只读，可随时吊销。">
+          <McpTokens projectId={project.id} slug={project.slug} endpoint={`${appUrl()}/api/mcp/${project.slug}`} tokens={tokens} />
         </Section>
 
         <Section id="trash" title="回收站" desc="恢复误删的知识库、文档或分组（含子节点）。恢复的文档默认未发布，恢复的知识库默认私有。">

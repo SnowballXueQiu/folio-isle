@@ -6,6 +6,7 @@ import { tx, sql } from "@/lib/db";
 import { requireUser, clientIp } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { projectRole, atLeast, HttpError, type Role } from "@/lib/perms";
+import { randomToken, sha256 } from "@/lib/crypto";
 import { deleteLibrary, restoreLibrary, revertTreeEvent, restoreNode } from "@/lib/docs";
 
 async function ctxFor(projectId: number, need: Role) {
@@ -166,4 +167,34 @@ export async function revertEvent(projectId: number, eventId: number) {
   const { ctx } = await ctxFor(projectId, "admin");
   await tx((t) => revertTreeEvent(t, ctx, eventId));
   revalidatePath("/p", "layout");
+}
+
+export type TokenState = { token?: string; name?: string; error?: string } | null;
+
+/** Creates a read-only MCP token; the plain token is returned once and only its hash is stored. */
+export async function createProjectToken(projectId: number, _prev: TokenState, form: FormData): Promise<TokenState> {
+  const { ctx, user } = await ctxFor(projectId, "admin");
+  const name = String(form.get("name") ?? "").trim().slice(0, 60);
+  if (!name) return { error: "请给令牌起个名字，比如「Claude Code - 我的电脑」" };
+  const includePrivate = form.get("include_private") === "on";
+  const [{ n }] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM project_tokens WHERE project_id = ${projectId} AND revoked_at IS NULL`;
+  if (n >= 20) return { error: "每个项目最多 20 个有效令牌，请先吊销不用的" };
+  const token = `fio_${randomToken(30)}`;
+  await tx(async (t) => {
+    const [row] = await t<{ id: number }[]>`
+      INSERT INTO project_tokens (project_id, name, token_hash, token_hint, include_private, created_by)
+      VALUES (${projectId}, ${name}, ${sha256(token)}, ${token.slice(-4)}, ${includePrivate}, ${user.id}) RETURNING id`;
+    await audit(t, { ...ctx, objectType: "token", objectId: row.id, action: "token.create", detail: { name, include_private: includePrivate } });
+  });
+  revalidatePath(`/p/[slug]/settings`, "page");
+  return { token, name };
+}
+
+export async function revokeProjectToken(projectId: number, tokenId: number) {
+  const { ctx } = await ctxFor(projectId, "admin");
+  await tx(async (t) => {
+    const [row] = await t<{ name: string }[]>`UPDATE project_tokens SET revoked_at = now() WHERE id = ${tokenId} AND project_id = ${projectId} AND revoked_at IS NULL RETURNING name`;
+    if (row) await audit(t, { ...ctx, objectType: "token", objectId: tokenId, action: "token.revoke", detail: { name: row.name } });
+  });
+  revalidatePath(`/p/[slug]/settings`, "page");
 }

@@ -1,13 +1,14 @@
 "use client";
 // Sticky section nav for the settings page with scroll-spy.
 import { useEffect, useState } from "react";
-import { Settings2, Users, Library, Trash2, History } from "lucide-react";
+import { Settings2, Users, Library, Trash2, History, Plug } from "lucide-react";
 import { cx } from "@/lib/util";
 
 const ITEMS = [
   { id: "general", label: "基本信息", icon: Settings2 },
   { id: "members", label: "成员与角色", icon: Users },
   { id: "libraries", label: "知识库", icon: Library },
+  { id: "mcp", label: "MCP 接入", icon: Plug },
   { id: "trash", label: "回收站", icon: Trash2 },
   { id: "tree", label: "目录历史", icon: History },
 ];
