@@ -6,6 +6,7 @@ import { fmtDate } from "@/lib/util";
 import { Select } from "@/components/ui/Select";
 import { Pager } from "@/components/ui/Pager";
 import { Avatar } from "@/components/Avatar";
+import { DatePicker } from "@/components/ui/DatePicker";
 
 const OBJECT_LABEL: Record<string, string> = { doc: "文档", node: "目录节点", library: "知识库", member: "成员", comment: "评论", todo: "待办", note: "随笔", attachment: "附件", ai: "AI", project: "项目", settings: "站点设置", user: "用户" };
 const OBJECT_TYPES = Object.keys(OBJECT_LABEL);
@@ -42,8 +43,8 @@ export function AuditView({ base, filter, rows, total, pages, page, showProject,
           <label className="label">动作</label>
           <Select name="action" className="w-full" searchable minWidth={260} defaultValue={filter.action ?? ""} options={[{ value: "", label: "全部" }, ...Object.entries(ACTION_LABELS).map(([k, v]) => ({ value: k, label: v, hint: k }))]} />
         </div>
-        <div><label className="label">起始</label><input type="date" name="from" defaultValue={filter.from} className="input" /></div>
-        <div><label className="label">截止</label><input type="date" name="to" defaultValue={filter.to} className="input" /></div>
+        <div><label className="label">起始</label><DatePicker name="from" defaultValue={filter.from} placeholder="不限" quick="past" /></div>
+        <div><label className="label">截止</label><DatePicker name="to" defaultValue={filter.to} placeholder="不限" quick="past" /></div>
         <button className="btn btn-primary"><Search size={15} /> 查询</button>
       </form>
 

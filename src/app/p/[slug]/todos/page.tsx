@@ -1,3 +1,4 @@
+import { DatePicker } from "@/components/ui/DatePicker";
 import { Select } from "@/components/ui/Select";
 import { NavSelect } from "@/components/ui/NavSelect";
 import { FileText } from "lucide-react";
@@ -39,7 +40,7 @@ function TodoForm({ action, members, docs, todo, submit }: { action: (f: FormDat
         </div>
         <div>
           <label className="label">截止日期</label>
-          <input type="date" name="due" className="input" defaultValue={todo?.due_date ?? ""} />
+          <DatePicker name="due" defaultValue={todo?.due_date ?? ""} placeholder="无截止日期" />
         </div>
       </div>
       <DocPicker options={docs} initial={todo?.docs?.map((d) => d.id) ?? []} />
