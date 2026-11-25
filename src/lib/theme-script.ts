@@ -1,0 +1,2 @@
+// Runs before first paint (inlined in <head>) so the page never flashes the wrong theme.
+export const THEME_SCRIPT = `(function(){try{var d=document.documentElement,m=matchMedia('(prefers-color-scheme: dark)');function a(){var t=localStorage.getItem('theme')||'system';d.dataset.theme=t==='system'?(m.matches?'dark':'light'):t;d.dataset.themePref=t;}a();m.addEventListener('change',function(){a();dispatchEvent(new Event('themechange'))});addEventListener('storage',function(e){if(e.key==='theme'){a();dispatchEvent(new Event('themechange'))}})}catch(e){}})();`;

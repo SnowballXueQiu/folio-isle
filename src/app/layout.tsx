@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
 import { NavProgress } from "@/components/NavProgress";
+import { THEME_SCRIPT } from "@/lib/theme-script";
 
 export const metadata: Metadata = {
   title: { default: "言屿 Folio Isle", template: "%s · 言屿" },
@@ -10,7 +11,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <meta name="theme-color" content="#f7f7f4" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#121019" media="(prefers-color-scheme: dark)" />
+      </head>
       <body className="min-h-screen">
         <Suspense fallback={null}>
           <NavProgress />

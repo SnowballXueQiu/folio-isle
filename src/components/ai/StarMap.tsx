@@ -25,11 +25,17 @@ export function StarMap({ docs, edges, libraries }: { docs: MapDoc[]; edges: Map
   const [focus, setFocus] = useState<number | null>(null);
   const [selected, setSelected] = useState<MapEdge | null>(null);
   const [query, setQuery] = useState("");
+  const [themeTick, setThemeTick] = useState(0);
+  useEffect(() => {
+    const on = () => setThemeTick((t) => t + 1);
+    addEventListener("themechange", on);
+    return () => removeEventListener("themechange", on);
+  }, []);
   const byId = useMemo(() => new Map(docs.map((d) => [d.id, d])), [docs]);
 
   useEffect(() => {
     if (!box.current) return;
-    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    const dark = document.documentElement.dataset.theme === "dark";
     const colors = dark ? LIB_COLORS_DARK : LIB_COLORS;
     const degree = new Map<number, number>();
     edges.forEach((e) => {
@@ -92,7 +98,8 @@ export function StarMap({ docs, edges, libraries }: { docs: MapDoc[]; edges: Map
     });
     cy.current = instance;
     return () => instance.destroy();
-  }, [docs, edges]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docs, edges, themeTick]);
 
   // filters & focus
   useEffect(() => {

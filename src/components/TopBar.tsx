@@ -1,7 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { currentUser, displayName } from "@/lib/auth";
-import { Avatar } from "./Avatar";
+import { UserMenu } from "./UserMenu";
+import { ThemeToggle } from "./ThemeSwitch";
 
 export async function TopBar({ crumbs = [] }: { crumbs?: { href?: string; label: string }[] }) {
   const user = await currentUser();
@@ -30,23 +31,14 @@ export async function TopBar({ crumbs = [] }: { crumbs?: { href?: string; label:
         <div className="ml-auto flex items-center gap-2">
           {user ? (
             <>
-              {user.is_site_admin && <Link href="/admin" className="btn btn-ghost btn-sm">站点设置</Link>}
-              <details className="relative">
-                <summary className="list-none cursor-pointer flex items-center gap-2 rounded-full pl-1 pr-2 py-1 hover:bg-[var(--panel-2)]">
-                  <Avatar name={displayName(user)} url={user.avatar_url} />
-                  <span className="text-sm hidden sm:inline">{displayName(user)}</span>
-                </summary>
-                <div className="pop-in absolute right-0 mt-2 w-44 panel p-1 shadow-lg text-sm">
-                  <div className="px-3 py-2 muted text-xs">@{user.username}</div>
-                  <Link href="/" className="block px-3 py-2 rounded-lg hover:bg-[var(--panel-2)]">我的项目</Link>
-                  <form action="/api/auth/logout" method="post">
-                    <button className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--panel-2)]">退出登录</button>
-                  </form>
-                </div>
-              </details>
+              {user.is_site_admin && <Link href="/admin" className="btn btn-ghost btn-sm hidden md:inline-flex">站点设置</Link>}
+              <UserMenu name={displayName(user)} username={user.username} avatar={user.avatar_url} admin={user.is_site_admin} />
             </>
           ) : (
-            <a href="/api/auth/login" className="btn btn-primary btn-sm">登录</a>
+            <>
+              <ThemeToggle />
+              <a href="/api/auth/login" className="btn btn-primary btn-sm">登录</a>
+            </>
           )}
         </div>
       </div>
