@@ -12,10 +12,10 @@ export default async function AuditPage({ params, searchParams }: { params: Prom
   const project = await loadProject(slug);
   await requireProjectRole(await currentUser(), project, "admin");
   const filter: AuditFilter = { actor: sp.actor, objectType: sp.objectType, objectId: sp.objectId, action: sp.action, from: sp.from, to: sp.to };
-  const { rows, hasMore, page } = await queryAudit({ ...filter, projectId: project.id, page: Number(sp.page) || 1 });
+  const { rows, total, page, pages } = await queryAudit({ ...filter, projectId: project.id, page: Number(sp.page) || 1 });
   return (
-    <main className="mx-auto max-w-[1400px] px-4 py-8">
-      <AuditView base={`/p/${slug}/audit`} filter={filter} rows={rows} hasMore={hasMore} page={page} />
+    <main className="shell py-8">
+      <AuditView base={`/p/${slug}/audit`} filter={filter} rows={rows} total={total} pages={pages} page={page} />
     </main>
   );
 }
