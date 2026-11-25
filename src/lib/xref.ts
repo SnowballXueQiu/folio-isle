@@ -7,8 +7,9 @@ import { getAiConfig } from "./settings";
 import { RULES_VERSION } from "./ai/prompts";
 import type { DocAnalysis } from "./ai/execute";
 import { markdownToPlain } from "./md/plain";
+import { isNameLikeAlias } from "./ai/alias";
 
-export type Entry = { id: number; title: string; library: string; names: string[] };
+export type Entry = { id: number; title: string; library: string; names: string[]; aliases: string[] };
 
 /** Names an entry is matched by: its title, the title without a trailing （…）/(…) note, spacing variants, AI aliases. */
 export function entryNames(title: string, aliases: string[] = []): string[] {
@@ -44,7 +45,11 @@ export async function glossaryEntries(projectId: number, isMember: boolean): Pro
     ORDER BY l.position, n.position, n.id`;
   return rows
     .filter((r) => !r.result || r.result.entity !== false) // AI said "not a named thing" (e.g. 前期, 武器)
-    .map((r) => ({ id: r.id, title: r.title, library: r.library, names: entryNames(r.title, r.result?.aliases ?? []) }));
+    .map((r) => {
+      // re-check stored aliases too, so analyses made before the stricter rules stop producing bad links
+      const aliases = (r.result?.aliases ?? []).filter((a) => isNameLikeAlias(a, r.title));
+      return { id: r.id, title: r.title, library: r.library, names: entryNames(r.title, aliases), aliases };
+    });
 }
 
 export type XrefCard = {

@@ -11,7 +11,7 @@
     "migrate": "tsx src/scripts/migrate.ts",
     "worker": "tsx src/worker/main.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/lib/md/roundtrip.test.ts"
+    "test": "tsx --test src/lib/md/roundtrip.test.ts src/lib/md/xref.test.ts"
   },
   "dependencies": {
     "@tiptap/extension-code-block-lowlight": "^3.35.0",

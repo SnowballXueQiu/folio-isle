@@ -1,6 +1,7 @@
 // Executes one AI task. Results are written with ON CONFLICT DO NOTHING, so a task
 // that is retried after a crash never produces duplicate rows.
 import type { Db } from "../db";
+import { isNameLikeAlias } from "./alias";
 import type { AiConfig } from "../settings";
 import { chatJson } from "./provider";
 import { docPrompt, pairPrompt, libraryPrompt, projectPrompt, RULES_VERSION, RELATIONS, type Relation } from "./prompts";
@@ -69,7 +70,7 @@ export async function executeTask(db: Db, cfg: AiConfig, task: TaskRow) {
       // aliases must literally appear in the document, so a hallucinated name never becomes a link
       aliases:
         data.entity === true
-          ? [...new Set(arr(data.aliases).map((a) => str(a, 12)))].filter((a) => [...a].length >= 2 && a !== v.title && v.norm.includes(normalizeForMatch(a))).slice(0, 5)
+          ? [...new Set(arr(data.aliases).map((a) => str(a, 12)))].filter((a) => isNameLikeAlias(a, v.title) && v.norm.includes(normalizeForMatch(a))).slice(0, 5)
           : [],
     };
     await db`INSERT INTO ai_doc_analyses (project_id, node_id, version_id, model, rules_version, result)

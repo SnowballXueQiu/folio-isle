@@ -14,7 +14,7 @@ export type { Heading };
 export { markdownToEditorHtml } from "./editor-html";
 
 type HNode = { type: string; tagName?: string; value?: string; properties?: Record<string, unknown>; children?: HNode[] };
-export type XrefTarget = { id: number; title: string; names: string[] };
+export type XrefTarget = { id: number; title: string; names: string[]; aliases?: string[] };
 
 const SECTION_HEADS = new Set(["h1", "h2", "h3"]);
 const SKIP_TAGS = new Set(["a", "code", "pre", "h1", "h2", "h3", "h4", "h5", "h6", "summary"]);
@@ -25,21 +25,36 @@ function rehypeXref(targets: XrefTarget[], selfId?: number) {
   const byName = new Map<string, XrefTarget>();
   for (const t of targets) if (t.id !== selfId) for (const n of t.names) if (!byName.has(n)) byName.set(n, t);
   const names = [...byName.keys()].sort((a, b) => b.length - a.length);
+  const isAlias = (name: string) => byName.get(name)!.aliases?.includes(name) ?? false;
   return () => (tree: HNode) => {
     if (!names.length) return;
     const re = new RegExp(names.map(escapeRe).join("|"), "g");
-    // like Wikipedia: only the first mention of an entry in each section (h1–h3) is linked
+    // Sections are split at h1–h3. Pass 1 finds the entries whose real title appears in each section,
+    // so an alias mention there ("诺伯") does not take the link from a later title mention ("诺伯 · 昂萨利德").
+    const titled: Set<number>[] = [new Set()];
+    const scan = (node: HNode) => {
+      for (const child of node.children ?? []) {
+        if (child.type === "element" && SECTION_HEADS.has(child.tagName!)) titled.push(new Set());
+        if (child.type === "text" && child.value) {
+          for (const m of child.value.matchAll(re)) if (!isAlias(m[0])) titled[titled.length - 1].add(byName.get(m[0])!.id);
+        } else if (child.type === "element" && !SKIP_TAGS.has(child.tagName!)) scan(child);
+      }
+    };
+    scan(tree);
+    // Pass 2 links like Wikipedia: only the first mention of an entry in each section.
+    let section = 0;
     let seen = new Set<number>();
     const walk = (node: HNode) => {
       if (!node.children) return;
       const out: HNode[] = [];
       for (const child of node.children) {
-        if (child.type === "element" && SECTION_HEADS.has(child.tagName!)) seen = new Set();
+        if (child.type === "element" && SECTION_HEADS.has(child.tagName!)) (seen = new Set()), section++;
         if (child.type === "text" && child.value) {
           let last = 0;
           for (const m of child.value.matchAll(re)) {
             const t = byName.get(m[0])!;
             if (seen.has(t.id)) continue;
+            if (isAlias(m[0]) && titled[section].has(t.id)) continue;
             seen.add(t.id);
             if (m.index! > last) out.push({ type: "text", value: child.value.slice(last, m.index) });
             out.push({ type: "element", tagName: "a", properties: { href: `/d/${t.id}`, className: ["xref"], dataXref: String(t.id) }, children: [{ type: "text", value: m[0] }] });
