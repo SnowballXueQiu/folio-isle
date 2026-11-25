@@ -13,7 +13,7 @@ export type TaskRow = { id: number; project_id: number; kind: "doc" | "pair" | "
 const DOC_CHARS = 12000;
 const PAIR_CHARS = 7000;
 
-type DocAnalysis = { summary: string; key_points: { point: string; quote: string | null; verified: boolean }[]; topics: string[] };
+export type DocAnalysis = { summary: string; key_points: { point: string; quote: string | null; verified: boolean }[]; topics: string[]; entity?: boolean; aliases?: string[] };
 
 async function versionText(db: Db, vid: number) {
   const [v] = await db<{ title: string; content: string; node_id: number }[]>`SELECT title, content, node_id FROM doc_versions WHERE id = ${vid}`;
@@ -52,7 +52,7 @@ export async function executeTask(db: Db, cfg: AiConfig, task: TaskRow) {
     const vid = Number(p.vid);
     if (await analysis(db, vid, model)) return { note: "exists" };
     const v = await versionText(db, vid);
-    const { data, usage } = await chatJson<{ summary?: unknown; key_points?: unknown; topics?: unknown }>(cfg, model, docPrompt(v.title, v.plain.slice(0, DOC_CHARS) || "（空文档）"));
+    const { data, usage } = await chatJson<{ summary?: unknown; key_points?: unknown; topics?: unknown; entity?: unknown; aliases?: unknown }>(cfg, model, docPrompt(v.title, v.plain.slice(0, DOC_CHARS) || "（空文档）"));
     const result: DocAnalysis = {
       summary: str(data.summary, 400) || "（无摘要）",
       key_points: arr(data.key_points)
@@ -65,6 +65,12 @@ export async function executeTask(db: Db, cfg: AiConfig, task: TaskRow) {
         })
         .filter((k) => k.point),
       topics: arr(data.topics).map((t) => str(t, 20)).filter(Boolean).slice(0, 8),
+      entity: data.entity === true,
+      // aliases must literally appear in the document, so a hallucinated name never becomes a link
+      aliases:
+        data.entity === true
+          ? [...new Set(arr(data.aliases).map((a) => str(a, 12)))].filter((a) => [...a].length >= 2 && a !== v.title && v.norm.includes(normalizeForMatch(a))).slice(0, 5)
+          : [],
     };
     await db`INSERT INTO ai_doc_analyses (project_id, node_id, version_id, model, rules_version, result)
              VALUES (${task.project_id}, ${Number(p.node)}, ${vid}, ${model}, ${RULES_VERSION}, ${db.json(result as never)})

@@ -13,8 +13,8 @@ export default async function ProjectHome({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const project = await loadProject(slug);
   const role = await projectRole(await currentUser(), project.id);
-  const libs = await sql<{ id: number; name: string; description: string; is_public: boolean; docs: number; published: number; updated: Date | null }[]>`
-    SELECT l.id, l.name, l.description, l.is_public,
+  const libs = await sql<{ id: number; name: string; description: string; is_public: boolean; is_glossary: boolean; docs: number; published: number; updated: Date | null }[]>`
+    SELECT l.id, l.name, l.description, l.is_public, l.is_glossary,
       count(n.id) FILTER (WHERE n.kind = 'doc')::int AS docs,
       count(n.id) FILTER (WHERE n.published_version_id IS NOT NULL)::int AS published,
       max(n.updated_at) AS updated
@@ -32,6 +32,7 @@ export default async function ProjectHome({ params }: { params: Promise<{ slug: 
             <Link key={l.id} href={`/p/${slug}/kb/${l.id}`} className="panel p-5 card-hover">
               <div className="flex items-center justify-between">
                 <div className="font-semibold">{l.name}</div>
+                {l.is_glossary && <span className="chip ml-auto mr-1.5" title="其他知识库提到这里的词条时会自动交叉引用">📚 设定库</span>}
                 <span className="chip">
                   {l.is_public ? <Globe size={12} /> : <Lock size={12} />}
                   {l.is_public ? "公开" : "私有"}

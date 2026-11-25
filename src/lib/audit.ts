@@ -32,6 +32,8 @@ export const ACTION_LABELS: Record<string, string> = {
   "tree.revert": "撤销目录变更",
   "library.create": "新建知识库",
   "library.import": "导入文档",
+  "library.glossary": "设定库开关",
+  "library.split": "拆分知识库",
   "library.update": "修改知识库",
   "library.visibility": "调整可见性",
   "library.delete": "删除知识库",

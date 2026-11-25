@@ -1,7 +1,7 @@
 import type { ChatMessage } from "./provider";
 
 /** Bump when prompts or validation rules change: results are deduplicated per rules version. */
-export const RULES_VERSION = "r1";
+export const RULES_VERSION = "r2";
 
 export const RELATIONS = ["none", "supplement", "prerequisite", "overlap", "conflict"] as const;
 export type Relation = (typeof RELATIONS)[number];
@@ -28,8 +28,10 @@ export function docPrompt(title: string, text: string): ChatMessage[] {
     {
       role: "user",
       content: `请分析下面这篇文档，输出 JSON：
-{"summary": "120 字以内的摘要", "key_points": [{"point": "要点（30 字以内）", "quote": "支撑该要点的原文逐字引用"}], "topics": ["3-6 个主题词"]}
+{"summary": "120 字以内的摘要", "key_points": [{"point": "要点（30 字以内）", "quote": "支撑该要点的原文逐字引用"}], "topics": ["3-6 个主题词"], "entity": true, "aliases": ["别名"]}
 key_points 给出 3-6 条。
+entity：这篇文档是否在介绍一个具体的、有专有名称的对象（人物、组织、势力、地点、物品、专有概念等），即可以作为「词条」被其他文档引用。时期、章节、分类目录、泛称（如「武器」「职业」）、随笔都填 false。
+aliases：entity 为 true 时，列出原文中出现的该对象的其他称呼或简称（不含标题本身，每个 2-12 字，最多 5 个，必须在原文中逐字出现）；否则为空数组。
 
 《${title}》
 <<<

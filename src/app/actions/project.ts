@@ -112,6 +112,16 @@ export async function setLibraryVisibility(projectId: number, libraryId: number,
   revalidatePath("/p", "layout");
 }
 
+export async function setLibraryGlossary(projectId: number, libraryId: number, on: boolean) {
+  const { ctx } = await ctxFor(projectId, "admin");
+  await tx(async (t) => {
+    await t`UPDATE libraries SET is_glossary = ${on} WHERE id = ${libraryId} AND project_id = ${projectId}`;
+    await audit(t, { ...ctx, objectType: "library", objectId: libraryId, action: "library.glossary", detail: { is_glossary: on } });
+  });
+  revalidatePath("/p", "layout");
+  revalidatePath("/d", "layout");
+}
+
 export async function removeLibrary(projectId: number, libraryId: number) {
   const { ctx } = await ctxFor(projectId, "admin");
   await tx((t) => deleteLibrary(t, ctx, libraryId));

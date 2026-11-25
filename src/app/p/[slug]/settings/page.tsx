@@ -2,7 +2,7 @@ import { currentUser, displayName } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { loadProject, requireProjectRole } from "@/lib/perms";
 import { projectMembers } from "@/lib/project-data";
-import { addMember, setMemberRole, updateProject, setLibraryVisibility, removeLibrary, bringBackLibrary, bringBackNode, revertEvent } from "@/app/actions/project";
+import { addMember, setMemberRole, updateProject, setLibraryVisibility, setLibraryGlossary, removeLibrary, bringBackLibrary, bringBackNode, revertEvent } from "@/app/actions/project";
 import { AddMemberForm, RoleSelect, ConfirmButton } from "@/components/SettingsBits";
 import { Avatar } from "@/components/Avatar";
 import { fmtDate } from "@/lib/util";
@@ -31,8 +31,8 @@ export default async function SettingsPage({ params }: { params: Promise<{ slug:
   const user = await currentUser();
   await requireProjectRole(user, project, "admin");
   const members = await projectMembers(project.id);
-  const libs = await sql<{ id: number; name: string; is_public: boolean; deleted_at: Date | null }[]>`
-    SELECT id, name, is_public, deleted_at FROM libraries WHERE project_id = ${project.id} ORDER BY deleted_at NULLS FIRST, position, id`;
+  const libs = await sql<{ id: number; name: string; is_public: boolean; is_glossary: boolean; deleted_at: Date | null }[]>`
+    SELECT id, name, is_public, is_glossary, deleted_at FROM libraries WHERE project_id = ${project.id} ORDER BY deleted_at NULLS FIRST, position, id`;
   const trash = await sql<{ id: number; title: string; kind: string; library: string; deleted_at: Date; by: string | null; count: number }[]>`
     SELECT n.id, n.title, n.kind, l.name AS library, n.deleted_at, u.username AS by,
       (SELECT count(*)::int FROM nodes x WHERE x.delete_batch = n.delete_batch) AS count
@@ -90,7 +90,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ slug:
         </table>
       </Section>
 
-      <Section id="libraries" title="知识库可见性" desc="知识库默认私有。公开后游客可阅读其已发布文档和评论；恢复的知识库默认私有。">
+      <Section id="libraries" title="知识库" desc="知识库默认私有，公开后游客可阅读其已发布文档和评论；恢复的知识库默认私有。设定库里的文档是词条：其他知识库的正文提到词条名时，会自动出现交叉引用和悬浮说明。">
         <table className="table-clean">
           <tbody>
             {libs.map((l) => (
@@ -106,6 +106,12 @@ export default async function SettingsPage({ params }: { params: Promise<{ slug:
                         confirmText={l.is_public ? "改为私有？游客将无法再访问。" : "公开后任何人都能阅读该库已发布的文档和评论，确定公开？"}
                       >
                         {l.is_public ? "🌐 公开 · 改为私有" : "🔒 私有 · 设为公开"}
+                      </ConfirmButton>
+                      <ConfirmButton
+                        action={setLibraryGlossary.bind(null, project.id, l.id, !l.is_glossary)}
+                        confirmText={l.is_glossary ? `取消「${l.name}」的设定库身份？其他文档将不再自动链接到这里的词条。` : `把「${l.name}」设为设定库？库里已发布的文档会成为词条，其他文档提到它们时会自动出现交叉引用。`}
+                      >
+                        {l.is_glossary ? "📚 设定库 · 取消" : "设为设定库"}
                       </ConfirmButton>
                       <ConfirmButton className="btn btn-sm btn-danger" action={removeLibrary.bind(null, project.id, l.id)} confirmText={`删除知识库「${l.name}」？可在此处恢复。`}>
                         删除

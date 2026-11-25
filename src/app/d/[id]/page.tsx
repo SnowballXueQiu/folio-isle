@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { History, PencilLine, Download } from "lucide-react";
+import { History, PencilLine, Download, Quote } from "lucide-react";
 import { TopBar } from "@/components/TopBar";
 import { ReaderLayout } from "@/components/ReaderLayout";
 import { Outline } from "@/components/Outline";
 import { QuoteHighlighter } from "@/components/QuoteHighlighter";
+import { XrefHover } from "@/components/XrefHover";
+import { glossaryEntries, mentionsOf, entryNames } from "@/lib/xref";
 import { Comments, LikeButton, type CommentView } from "@/components/Engagement";
 import { PublishButtons } from "@/components/DocActions";
 import { currentUser, displayName } from "@/lib/auth";
@@ -70,7 +72,15 @@ export default async function DocPage({ params, searchParams }: { params: Promis
     SELECT v.id, v.title, v.content, v.created_at, coalesce(u.display_name, u.username) AS author
     FROM doc_versions v LEFT JOIN users u ON u.id = v.created_by WHERE v.id = ${versionId} AND v.node_id = ${id}`;
   if (!version) notFound();
-  const { html, headings } = renderMarkdown(version.content);
+  const entries = await glossaryEntries(project.id, !!role);
+  const { html, headings } = renderMarkdown(version.content, { xref: entries, selfId: id });
+  // an entry page lists the docs that mention it
+  const [glossary] = await sql<{ is_glossary: boolean }[]>`SELECT is_glossary FROM libraries WHERE id = ${library.id}`;
+  const self = entries.find((e) => e.id === id);
+  const mentions =
+    glossary?.is_glossary && node.published_version_id && mode === "published"
+      ? await mentionsOf({ id, projectId: project.id, names: self?.names ?? entryNames(node.title) }, !!role)
+      : [];
   const dirty = !!node.published_version_id && node.published_version_id !== node.head_version_id;
 
   const [{ likes, liked }] = await sql<{ likes: number; liked: boolean }[]>`
@@ -130,6 +140,25 @@ export default async function DocPage({ params, searchParams }: { params: Promis
           </div>
           <div id="doc-body" className="doc mt-8" dangerouslySetInnerHTML={{ __html: html }} />
           <QuoteHighlighter containerId="doc-body" />
+          <XrefHover containerId="doc-body" />
+          {mentions.length > 0 && (
+            <section className="mt-12">
+              <h2 className="flex items-center gap-2 text-sm font-semibold muted">
+                <Quote size={14} /> 提到「{node.title}」的文档 · {mentions.length}
+              </h2>
+              <div className="stagger mt-3 grid gap-2">
+                {mentions.map((m) => (
+                  <Link key={m.id} href={`/d/${m.id}`} className="panel card-hover block px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">{m.title}</span>
+                      <span className="chip">{m.library}</span>
+                    </div>
+                    <p className="mt-1 text-[13px] muted line-clamp-2">{m.snippet}</p>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
           {node.published_version_id && mode === "published" && (
             <>
               <div className="mt-12 flex items-center gap-3 border-t hairline pt-6">
